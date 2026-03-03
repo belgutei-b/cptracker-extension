@@ -1,13 +1,16 @@
-import { CountButton } from "~features/count-button"
-
-import "~style.css"
+import { authClient } from "~auth/auth-client"
 
 function IndexPopup() {
-  return (
-    <div className="plasmo-flex plasmo-items-center plasmo-justify-center plasmo-h-16 plasmo-w-40">
-      <CountButton />
-    </div>
-  )
+  const { data, isPending, error } = authClient.useSession()
+  if (isPending) {
+    return <>Loading...</>
+  }
+  if (error) {
+    return <>Error: {error.message}</>
+  }
+  if (data) {
+    return <>Signed in as {data.user.name}</>
+  }
 }
 
 export default IndexPopup
