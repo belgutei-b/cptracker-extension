@@ -27,8 +27,9 @@
     "typescript": "5.3.3"
   },
   "manifest": {
+    "permissions": ["tabs"],
     "host_permissions": [
-      "https://*/*",
+      "https://leetcode.com/*",
       "http://localhost:3000"
     ]
   }
