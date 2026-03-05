@@ -2,6 +2,9 @@ import { useEffect, useState } from "react"
 
 import { authClient } from "~auth/auth-client"
 import ComplexityField from "~components/complexity-field"
+import { APP_BASE_URL } from "~config/base-url"
+
+// todo: add cptracker logo to extension
 
 import "~style.css"
 
@@ -43,7 +46,7 @@ function IndexPopup() {
   }
 
   async function loadProblem(url: string) {
-    const res = await fetch("http://localhost:3000/api/extension/problems", {
+    const res = await fetch(`${APP_BASE_URL}/api/extension/problems`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -69,22 +72,37 @@ function IndexPopup() {
   async function handleStart() {
     if (!fetched || !problem) return
     if (isSolving) return
-    const res = await fetch(
-      `http://localhost:3000/api/extension/problems/${problem.problemId}/start`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" }
-      }
-    )
 
-    if (res.ok) {
-      const now = Date.now()
-      setStatus("IN_PROGRESS")
-      setStartedAtMs(now)
-      setLiveNowMs(now)
-    } else {
+    const prevStatus = status
+    const prevStartedAtMs = startedAtMs
+    const prevLiveNowMs = liveNowMs
+
+    const now = Date.now()
+    setStatus("IN_PROGRESS")
+    setStartedAtMs(now)
+    setLiveNowMs(now)
+
+    try {
+      const res = await fetch(
+        `${APP_BASE_URL}/api/extension/problems/${problem.problemId}/start`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" }
+        }
+      )
+
+      if (!res.ok) {
+        // todo: handle error case
+        setStatus(prevStatus)
+        setStartedAtMs(prevStartedAtMs)
+        setLiveNowMs(prevLiveNowMs)
+      }
+    } catch {
       // todo: handle error case
+      setStatus(prevStatus)
+      setStartedAtMs(prevStartedAtMs)
+      setLiveNowMs(prevLiveNowMs)
     }
   }
 
@@ -92,29 +110,48 @@ function IndexPopup() {
     if (!isSolving || startedAtMs === null) return
     if (!fetched || !problem) return
 
-    const res = await fetch(
-      `http://localhost:3000/api/extension/problems/${problem.problemId}/finish`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          newStatus,
-          note: problem.note,
-          timeComplexity: problem.timeComplexity,
-          spaceComplexity: problem.spaceComplexity
-        })
-      }
-    )
+    const prevStatus = status
+    const prevStartedAtMs = startedAtMs
+    const prevLiveNowMs = liveNowMs
+    const prevElapsedMs = elapsedMs
 
-    if (res.ok) {
-      const now = Date.now()
-      setElapsedMs((prev) => prev + Math.max(0, now - startedAtMs))
-      setStartedAtMs(null)
-      setLiveNowMs(now)
-      setStatus(newStatus)
-    } else {
+    const now = Date.now()
+    const elapsedDeltaMs = Math.max(0, now - startedAtMs)
+
+    setElapsedMs((prev) => prev + elapsedDeltaMs)
+    setStartedAtMs(null)
+    setLiveNowMs(now)
+    setStatus(newStatus)
+
+    try {
+      const res = await fetch(
+        `${APP_BASE_URL}/api/extension/problems/${problem.problemId}/finish`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            newStatus,
+            note: problem.note,
+            timeComplexity: problem.timeComplexity,
+            spaceComplexity: problem.spaceComplexity
+          })
+        }
+      )
+
+      if (!res.ok) {
+        // todo: handle error case
+        setStatus(prevStatus)
+        setStartedAtMs(prevStartedAtMs)
+        setLiveNowMs(prevLiveNowMs)
+        setElapsedMs(prevElapsedMs)
+      }
+    } catch {
       // todo: handle error case
+      setStatus(prevStatus)
+      setStartedAtMs(prevStartedAtMs)
+      setLiveNowMs(prevLiveNowMs)
+      setElapsedMs(prevElapsedMs)
     }
   }
 
@@ -124,7 +161,7 @@ function IndexPopup() {
     setIsSaving(true)
     try {
       const res = await fetch(
-        `http://localhost:3000/api/extension/problems/${problem.problemId}/save`,
+        `${APP_BASE_URL}/api/extension/problems/${problem.problemId}/save`,
         {
           method: "PATCH",
           credentials: "include",
@@ -183,6 +220,7 @@ function IndexPopup() {
   if (isPending) {
     return <div className="plasmo-p-4 plasmo-text-sm">Loading...</div>
   }
+  console.log(data)
 
   if (error) {
     // todo: better error ui
@@ -201,6 +239,7 @@ function IndexPopup() {
   }
 
   if (!isLeetCodeProblem) {
+    // todo: add styling
     return (
       <div className="plasmo-p-4 plasmo-text-sm">
         Open a LeetCode problem tab to start tracking.

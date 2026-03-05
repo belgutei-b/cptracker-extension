@@ -1,6 +1,7 @@
 import { createAuthClient } from "better-auth/react"
+import { APP_BASE_URL } from "~config/base-url"
 
 export const authClient = createAuthClient({
-  baseURL: "http://localhost:3000" /* Base URL of your Better Auth backend. */,
+  baseURL: APP_BASE_URL,
   plugins: []
 })
