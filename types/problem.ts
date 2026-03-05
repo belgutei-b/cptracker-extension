@@ -1,5 +1,5 @@
 type UserProblemFullClient = {
-  duration: number
+  duration: number // seconds
   createdAt: string
   updatedAt: string
   userId: string

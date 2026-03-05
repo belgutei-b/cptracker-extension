@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react"
 
 import { authClient } from "~auth/auth-client"
+import ComplexityField from "~components/complexity-field"
 
 import "~style.css"
+
+const MS_PER_SECOND = 1000
 
 function formatProblemTimer(totalMs: number) {
   const safeMs = Math.max(0, Math.floor(totalMs))
@@ -23,9 +26,6 @@ function formatProblemTimer(totalMs: number) {
 function IndexPopup() {
   const { data, isPending, error } = authClient.useSession()
   const [currentUrl, setCurrentUrl] = useState<string>("")
-  const [note, setNote] = useState<string>("")
-  const [timeComplexity, setTimeComplexity] = useState<string>("")
-  const [spaceComplexity, setSpaceComplexity] = useState<string>("")
   const [status, setStatus] = useState<string>("")
   const [elapsedMs, setElapsedMs] = useState<number>(0)
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null)
@@ -42,7 +42,7 @@ function IndexPopup() {
     return tab?.url || ""
   }
 
-  async function postProblem(url: string) {
+  async function loadProblem(url: string) {
     const res = await fetch("http://localhost:3000/api/extension/problems", {
       method: "POST",
       credentials: "include",
@@ -54,18 +54,16 @@ function IndexPopup() {
       const body = (await res.json()) as {
         problem: UserProblemFullClient
       }
+      const durationSeconds = Math.max(0, body.problem.duration)
+      const initialElapsedMs = durationSeconds * MS_PER_SECOND
 
-      setNote(body.problem.note)
-      setTimeComplexity(body.problem.timeComplexity)
-      setSpaceComplexity(body.problem.spaceComplexity)
       setStatus(body.problem.status)
-      setElapsedMs(Math.max(0, body.problem.duration) * 1000)
+      setElapsedMs(initialElapsedMs)
       setProblem(body.problem)
       setFetched(true)
     } else {
       // TODO: error handling
     }
-    console.log(res.ok)
   }
 
   async function handleStart() {
@@ -102,9 +100,9 @@ function IndexPopup() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           newStatus,
-          note,
-          timeComplexity,
-          spaceComplexity
+          note: problem.note,
+          timeComplexity: problem.timeComplexity,
+          spaceComplexity: problem.spaceComplexity
         })
       }
     )
@@ -132,9 +130,9 @@ function IndexPopup() {
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            note,
-            timeComplexity,
-            spaceComplexity
+            note: problem.note,
+            timeComplexity: problem.timeComplexity,
+            spaceComplexity: problem.spaceComplexity
           })
         }
       )
@@ -162,7 +160,7 @@ function IndexPopup() {
   useEffect(() => {
     if (!data || !isLeetCodeProblem || fetched) return
 
-    void postProblem(currentUrl)
+    void loadProblem(currentUrl)
   }, [currentUrl, data, fetched, isLeetCodeProblem])
 
   useEffect(() => {
@@ -213,7 +211,7 @@ function IndexPopup() {
   return (
     <div className="plasmo-w-[360px] plasmo-rounded-2xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
       <div className="plasmo-flex plasmo-w-full plasmo-justify-center plasmo-border-y plasmo-border-[#3e3e3e] plasmo-py-3 plasmo-text-[#ffa116]">
-        <span className="plasmo-font-mono plasmo-text-4xl">
+        <span className="plasmo-font-mono plasmo-text-2xl">
           {formattedTimer.main}
           <span className="plasmo-text-xl">.{formattedTimer.centiseconds}</span>
         </span>
@@ -221,37 +219,30 @@ function IndexPopup() {
 
       <div className="plasmo-p-4">
         <div className="plasmo-mb-4 plasmo-grid plasmo-grid-cols-2 plasmo-gap-3">
-          <div>
-            <label
-              htmlFor="time"
-              className="plasmo-mb-1 plasmo-block plasmo-text-xs plasmo-font-semibold plasmo-text-stone-300">
-              Time Complexity
-            </label>
-            <input
-              id="time"
-              type="text"
-              value={timeComplexity}
-              onChange={(e) => setTimeComplexity(e.target.value)}
-              placeholder="O(n log n)"
-              className="plasmo-w-full plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-gray-200 placeholder:plasmo-text-stone-600"
-            />
-          </div>
+          <ComplexityField
+            id="time"
+            label="Time Complexity"
+            value={problem?.timeComplexity ?? ""}
+            onChange={(value) =>
+              setProblem((prev) =>
+                prev ? { ...prev, timeComplexity: value } : prev
+              )
+            }
+            placeholder="O(n log n)"
+            textClassName="plasmo-text-gray-200"
+          />
 
-          <div>
-            <label
-              htmlFor="space"
-              className="plasmo-mb-1 plasmo-block plasmo-text-xs plasmo-font-semibold plasmo-text-stone-300">
-              Space Complexity
-            </label>
-            <input
-              id="space"
-              type="text"
-              value={spaceComplexity}
-              onChange={(e) => setSpaceComplexity(e.target.value)}
-              placeholder="O(1)"
-              className="plasmo-w-full plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-stone-200 placeholder:plasmo-text-stone-600"
-            />
-          </div>
+          <ComplexityField
+            id="space"
+            label="Space Complexity"
+            value={problem?.spaceComplexity ?? ""}
+            onChange={(value) =>
+              setProblem((prev) =>
+                prev ? { ...prev, spaceComplexity: value } : prev
+              )
+            }
+            placeholder="O(1)"
+          />
         </div>
 
         <label
@@ -261,8 +252,12 @@ function IndexPopup() {
         </label>
         <textarea
           id="notes"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
+          value={problem?.note ?? ""}
+          onChange={(e) =>
+            setProblem((prev) =>
+              prev ? { ...prev, note: e.target.value } : prev
+            )
+          }
           className="plasmo-h-32 plasmo-w-full plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200"
         />
       </div>
@@ -272,15 +267,13 @@ function IndexPopup() {
           <button
             onClick={handleSaveNotes}
             disabled={!fetched || !problem || isSaving}
-            className="plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-sky-300 hover:plasmo-bg-white/10 disabled:plasmo-cursor-not-allowed disabled:plasmo-opacity-50">
+            className="popup-btn popup-btn--update">
             {isSaving ? "Updating..." : "Update notes"}
           </button>
         )}
 
         {!isSolving && status !== "SOLVED" && (
-          <button
-            onClick={handleStart}
-            className="plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-[#ffa116] hover:plasmo-bg-white/10">
+          <button onClick={handleStart} className="popup-btn popup-btn--start">
             ▶ Start
           </button>
         )}
@@ -289,12 +282,12 @@ function IndexPopup() {
           <>
             <button
               onClick={() => handleFinish("TRIED")}
-              className="plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-red-400 hover:plasmo-bg-white/10">
+              className="popup-btn popup-btn--tried">
               Tried
             </button>
             <button
               onClick={() => handleFinish("SOLVED")}
-              className="plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-emerald-400 hover:plasmo-bg-white/10">
+              className="popup-btn popup-btn--solved">
               Solved
             </button>
           </>
