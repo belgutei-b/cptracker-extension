@@ -4,8 +4,6 @@ import { authClient } from "~auth/auth-client"
 
 import "~style.css"
 
-type ProblemStatus = "TODO" | "IN_PROGRESS" | "TRIED" | "SOLVED"
-
 function formatProblemTimer(totalMs: number) {
   const safeMs = Math.max(0, Math.floor(totalMs))
   const safeSeconds = Math.floor(safeMs / 1000)
@@ -28,11 +26,14 @@ function IndexPopup() {
   const [note, setNote] = useState<string>("")
   const [timeComplexity, setTimeComplexity] = useState<string>("")
   const [spaceComplexity, setSpaceComplexity] = useState<string>("")
-  const [status, setStatus] = useState<ProblemStatus>("TODO")
+  const [status, setStatus] = useState<string>("")
   const [elapsedMs, setElapsedMs] = useState<number>(0)
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null)
   const [liveNowMs, setLiveNowMs] = useState<number>(Date.now())
+  const [isSaving, setIsSaving] = useState<boolean>(false)
   const [fetched, setFetched] = useState<boolean>(false)
+  const [problem, setProblem] = useState<UserProblemFullClient | null>(null)
+  const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
 
   const getCurrentTabUrl = async (): Promise<string> => {
     // TODO: add "tabs" permission in the manifest
@@ -41,7 +42,7 @@ function IndexPopup() {
     return tab?.url || ""
   }
 
-  const postProblem = async (url: string) => {
+  async function postProblem(url: string) {
     const res = await fetch("http://localhost:3000/api/extension/problems", {
       method: "POST",
       credentials: "include",
@@ -57,15 +58,92 @@ function IndexPopup() {
       setNote(body.problem.note)
       setTimeComplexity(body.problem.timeComplexity)
       setSpaceComplexity(body.problem.spaceComplexity)
-      if (
-        body.problem.status === "TODO" ||
-        body.problem.status === "IN_PROGRESS" ||
-        body.problem.status === "TRIED" ||
-        body.problem.status === "SOLVED"
-      ) {
-        setStatus(body.problem.status)
-      }
+      setStatus(body.problem.status)
+      setElapsedMs(Math.max(0, body.problem.duration) * 1000)
+      setProblem(body.problem)
       setFetched(true)
+    } else {
+      // TODO: error handling
+    }
+    console.log(res.ok)
+  }
+
+  async function handleStart() {
+    if (!fetched || !problem) return
+    if (isSolving) return
+    const res = await fetch(
+      `http://localhost:3000/api/extension/problems/${problem.problemId}/start`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" }
+      }
+    )
+
+    if (res.ok) {
+      const now = Date.now()
+      setStatus("IN_PROGRESS")
+      setStartedAtMs(now)
+      setLiveNowMs(now)
+    } else {
+      // todo: handle error case
+    }
+  }
+
+  async function handleFinish(newStatus: "TRIED" | "SOLVED") {
+    if (!isSolving || startedAtMs === null) return
+    if (!fetched || !problem) return
+
+    const res = await fetch(
+      `http://localhost:3000/api/extension/problems/${problem.problemId}/finish`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newStatus,
+          note,
+          timeComplexity,
+          spaceComplexity
+        })
+      }
+    )
+
+    if (res.ok) {
+      const now = Date.now()
+      setElapsedMs((prev) => prev + Math.max(0, now - startedAtMs))
+      setStartedAtMs(null)
+      setLiveNowMs(now)
+      setStatus(newStatus)
+    } else {
+      // todo: handle error case
+    }
+  }
+
+  async function handleSaveNotes() {
+    if (isSolving || !fetched || !problem || isSaving) return
+
+    setIsSaving(true)
+    try {
+      const res = await fetch(
+        `http://localhost:3000/api/extension/problems/${problem.problemId}/save`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            note,
+            timeComplexity,
+            spaceComplexity
+          })
+        }
+      )
+
+      if (!res.ok) {
+        // todo: handle error case
+      }
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -80,7 +158,6 @@ function IndexPopup() {
   const isLeetCodeProblem = currentUrl.startsWith(
     "https://leetcode.com/problems/"
   )
-  const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
 
   useEffect(() => {
     if (!data || !isLeetCodeProblem || fetched) return
@@ -105,31 +182,18 @@ function IndexPopup() {
       : 0)
   const formattedTimer = formatProblemTimer(displayedMs)
 
-  const startSolving = () => {
-    if (isSolving) return
-    const now = Date.now()
-    setStatus("IN_PROGRESS")
-    setStartedAtMs(now)
-    setLiveNowMs(now)
-  }
-
-  const finishSolving = (nextStatus: "TRIED" | "SOLVED") => {
-    if (!isSolving || startedAtMs === null) return
-    const now = Date.now()
-    setElapsedMs((prev) => prev + Math.max(0, now - startedAtMs))
-    setStartedAtMs(null)
-    setLiveNowMs(now)
-    setStatus(nextStatus)
-  }
-
   if (isPending) {
     return <div className="plasmo-p-4 plasmo-text-sm">Loading...</div>
   }
+
   if (error) {
+    // todo: better error ui
     return (
       <div className="plasmo-p-4 plasmo-text-sm">Error: {error.message}</div>
     )
   }
+
+  // Unauthenticated User
   if (!data) {
     return (
       <div className="plasmo-p-4 plasmo-text-sm">
@@ -137,6 +201,7 @@ function IndexPopup() {
       </div>
     )
   }
+
   if (!isLeetCodeProblem) {
     return (
       <div className="plasmo-p-4 plasmo-text-sm">
@@ -147,13 +212,7 @@ function IndexPopup() {
 
   return (
     <div className="plasmo-w-[360px] plasmo-rounded-2xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
-      <div className="plasmo-flex plasmo-items-start plasmo-justify-between plasmo-gap-3 plasmo-px-4 plasmo-pt-4">
-        <div className="plasmo-rounded-full plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-px-2.5 plasmo-py-1 plasmo-text-[10px] plasmo-font-semibold plasmo-tracking-wide plasmo-uppercase plasmo-text-stone-300">
-          {status.replace("_", " ")}
-        </div>
-      </div>
-
-      <div className="plasmo-mt-4 plasmo-flex plasmo-w-full plasmo-justify-center plasmo-border-y plasmo-border-[#3e3e3e] plasmo-py-3 plasmo-text-[#ffa116]">
+      <div className="plasmo-flex plasmo-w-full plasmo-justify-center plasmo-border-y plasmo-border-[#3e3e3e] plasmo-py-3 plasmo-text-[#ffa116]">
         <span className="plasmo-font-mono plasmo-text-4xl">
           {formattedTimer.main}
           <span className="plasmo-text-xl">.{formattedTimer.centiseconds}</span>
@@ -209,22 +268,32 @@ function IndexPopup() {
       </div>
 
       <div className="plasmo-flex plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-t plasmo-border-[#3e3e3e] plasmo-p-4">
-        <button
-          onClick={startSolving}
-          disabled={isSolving}
-          className="plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-[#ffa116] hover:plasmo-bg-white/10 disabled:plasmo-cursor-not-allowed disabled:plasmo-opacity-50">
-          {isSolving ? "Solving..." : "▶ Play"}
-        </button>
+        {!isSolving && (
+          <button
+            onClick={handleSaveNotes}
+            disabled={!fetched || !problem || isSaving}
+            className="plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-sky-300 hover:plasmo-bg-white/10 disabled:plasmo-cursor-not-allowed disabled:plasmo-opacity-50">
+            {isSaving ? "Updating..." : "Update notes"}
+          </button>
+        )}
+
+        {!isSolving && status !== "SOLVED" && (
+          <button
+            onClick={handleStart}
+            className="plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-[#ffa116] hover:plasmo-bg-white/10">
+            ▶ Start
+          </button>
+        )}
 
         {status === "IN_PROGRESS" && (
           <>
             <button
-              onClick={() => finishSolving("TRIED")}
+              onClick={() => handleFinish("TRIED")}
               className="plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-red-400 hover:plasmo-bg-white/10">
               Tried
             </button>
             <button
-              onClick={() => finishSolving("SOLVED")}
+              onClick={() => handleFinish("SOLVED")}
               className="plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm plasmo-text-emerald-400 hover:plasmo-bg-white/10">
               Solved
             </button>
