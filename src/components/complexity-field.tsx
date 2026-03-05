@@ -28,7 +28,7 @@ function ComplexityField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`plasmo-w-full plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-px-3 plasmo-py-2 plasmo-text-sm ${textClassName} placeholder:plasmo-text-stone-600`}
+        className={`plasmo-w-full plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-px-2 plasmo-py-2 plasmo-text-xs ${textClassName} placeholder:plasmo-text-stone-600`}
       />
     </div>
   )

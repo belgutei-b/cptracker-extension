@@ -209,26 +209,26 @@ function IndexPopup() {
   }
 
   return (
-    <div className="plasmo-w-[360px] plasmo-rounded-2xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
+    <div className="plasmo-w-[340px] plasmo-rounded-2xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
       <div className="plasmo-flex plasmo-w-full plasmo-justify-center plasmo-border-y plasmo-border-[#3e3e3e] plasmo-py-3 plasmo-text-[#ffa116]">
         <span className="plasmo-font-mono plasmo-text-2xl">
           {formattedTimer.main}
-          <span className="plasmo-text-xl">.{formattedTimer.centiseconds}</span>
+          <span className="plasmo-text-lg">.{formattedTimer.centiseconds}</span>
         </span>
       </div>
 
-      <div className="plasmo-p-4">
-        <div className="plasmo-mb-4 plasmo-grid plasmo-grid-cols-2 plasmo-gap-3">
+      <div className="plasmo-px-4 plasmo-pt-3 plasmo-pb-0">
+        <div className="plasmo-mb-4 plasmo-grid plasmo-grid-cols-2 plasmo-gap-4">
           <ComplexityField
             id="time"
-            label="Time Complexity"
+            label="Time complexity"
             value={problem?.timeComplexity ?? ""}
             onChange={(value) =>
               setProblem((prev) =>
                 prev ? { ...prev, timeComplexity: value } : prev
               )
             }
-            placeholder="O(n log n)"
+            placeholder="O(n logn)"
             textClassName="plasmo-text-gray-200"
           />
 
@@ -241,7 +241,7 @@ function IndexPopup() {
                 prev ? { ...prev, spaceComplexity: value } : prev
               )
             }
-            placeholder="O(1)"
+            placeholder="O(n)"
           />
         </div>
 
@@ -262,7 +262,7 @@ function IndexPopup() {
         />
       </div>
 
-      <div className="plasmo-flex plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-t plasmo-border-[#3e3e3e] plasmo-p-4">
+      <div className="plasmo-flex plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-[#3e3e3e] plasmo-p-4">
         {!isSolving && (
           <button
             onClick={handleSaveNotes}

@@ -11,7 +11,7 @@
 
 @layer components {
   .popup-btn {
-    @apply plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-3 plasmo-py-2 plasmo-text-sm;
+    @apply plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-px-2 plasmo-py-1.5 plasmo-text-xs;
     @apply hover:plasmo-bg-white/10 disabled:plasmo-cursor-not-allowed disabled:plasmo-opacity-50;
   }
 
