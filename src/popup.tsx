@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 
 import { authClient } from "~auth/auth-client"
 import ComplexityField from "~components/complexity-field"
+import PopupMessage from "~components/popup-message"
 import { APP_BASE_URL } from "~config/base-url"
 
 // todo: add cptracker logo to extension
@@ -222,37 +223,31 @@ function IndexPopup() {
   const formattedTimer = formatProblemTimer(displayedMs)
 
   if (isPending) {
-    return <div className="plasmo-p-4 plasmo-text-sm">Loading...</div>
+    return <PopupMessage message="Loading..." />
   }
   console.log(data)
 
   if (error) {
     // todo: better error ui
-    return (
-      <div className="plasmo-p-4 plasmo-text-sm">Error: {error.message}</div>
-    )
+    return <PopupMessage message="Unexpected Error Occurred" />
   }
 
   // Unauthenticated User
   if (!data) {
     return (
-      <div className="plasmo-p-4 plasmo-text-sm">
-        Sign in at www.cptracker.org to use the tracker.
-      </div>
+      <PopupMessage message="Sign in at www.cptracker.org to use the tracker." />
     )
   }
 
   if (!isLeetCodeProblem) {
     // todo: add styling
     return (
-      <div className="plasmo-p-4 plasmo-text-sm">
-        Open a LeetCode problem tab to start tracking.
-      </div>
+      <PopupMessage message="Open a LeetCode problem tab to start tracking." />
     )
   }
 
   return (
-    <div className="plasmo-w-[340px] plasmo-rounded-2xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
+    <div className="plasmo-w-[340px] plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
       <div className="plasmo-flex plasmo-w-full plasmo-justify-center plasmo-border-y plasmo-border-[#3e3e3e] plasmo-py-3 plasmo-text-[#ffa116]">
         <span className="plasmo-font-mono plasmo-text-2xl">
           {formattedTimer.main}
@@ -335,6 +330,16 @@ function IndexPopup() {
             </button>
           </>
         )}
+      </div>
+
+      <div className="plasmo-border-t plasmo-border-[#3e3e3e] plasmo-py-2 plasmo-text-center plasmo-text-[11px] plasmo-text-stone-400">
+        <a
+          href="https://www.cptracker.org"
+          target="_blank"
+          rel="noreferrer"
+          className="hover:plasmo-text-stone-200">
+          www.cptracker.org
+        </a>
       </div>
     </div>
   )
