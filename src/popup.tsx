@@ -5,6 +5,10 @@ import ComplexityField from "~components/complexity-field"
 import { APP_BASE_URL } from "~config/base-url"
 
 // todo: add cptracker logo to extension
+// todo: error uis
+// todo:
+// TODO: add "tabs" permission in the manifest
+// TODO: change the permission to only run in leetcode.com
 
 import "~style.css"
 
