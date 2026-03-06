@@ -4,13 +4,16 @@ import { authClient } from "~auth/auth-client"
 import ComplexityField from "~components/complexity-field"
 import PopupMessage from "~components/popup-message"
 import { APP_BASE_URL } from "~config/base-url"
+import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 
 // TODO: add "tabs" permission in the manifest
 // TODO: change the permission to only run in leetcode.com
+// TODO: if auth fails, show that login at cptracker.org
 
 import "~style.css"
 
-const MS_PER_SECOND = 1000
+type SessionData = ReturnType<typeof authClient.useSession>["data"]
+type ProblemStatus = "TODO" | "IN_PROGRESS" | "TRIED" | "SOLVED"
 
 function formatProblemTimer(totalMs: number) {
   const safeMs = Math.max(0, Math.floor(totalMs))
@@ -29,9 +32,11 @@ function formatProblemTimer(totalMs: number) {
 }
 
 function IndexPopup() {
-  const { data, isPending, error } = authClient.useSession()
+  const [data, setData] = useState<SessionData>(null)
+  const [isPending, setIsPending] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
   const [currentUrl, setCurrentUrl] = useState<string>("")
-  const [status, setStatus] = useState<string>("")
+  const [status, setStatus] = useState<ProblemStatus>("TODO")
   const [elapsedMs, setElapsedMs] = useState<number>(0)
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null)
   const [liveNowMs, setLiveNowMs] = useState<number>(Date.now())
@@ -47,6 +52,10 @@ function IndexPopup() {
     return tab?.url || ""
   }
 
+  const isLeetCodeProblem = currentUrl.startsWith(
+    "https://leetcode.com/problems/"
+  )
+
   async function loadProblem(url: string) {
     const res = await fetch(`${APP_BASE_URL}/api/extension/problems`, {
       method: "POST",
@@ -60,9 +69,9 @@ function IndexPopup() {
         problem: UserProblemFullClient
       }
       const durationSeconds = Math.max(0, body.problem.duration)
-      const initialElapsedMs = durationSeconds * MS_PER_SECOND
+      const initialElapsedMs = durationSeconds * 1000
 
-      setStatus(body.problem.status)
+      setStatus(body.problem.status as ProblemStatus)
       setElapsedMs(initialElapsedMs)
       setProblem(body.problem)
       setFetched(true)
@@ -100,7 +109,8 @@ function IndexPopup() {
         setStartedAtMs(prevStartedAtMs)
         setLiveNowMs(prevLiveNowMs)
       }
-    } catch {
+    } catch (err) {
+      console.log(err)
       // todo: handle error case
       setStatus(prevStatus)
       setStartedAtMs(prevStartedAtMs)
@@ -121,7 +131,7 @@ function IndexPopup() {
     const elapsedDeltaMs = Math.max(0, now - startedAtMs)
 
     setElapsedMs((prev) => prev + elapsedDeltaMs)
-    setStartedAtMs(null)
+
     setLiveNowMs(now)
     setStatus(newStatus)
 
@@ -184,6 +194,7 @@ function IndexPopup() {
     }
   }
 
+  // read the active tab URL once when the popup mounts.
   useEffect(() => {
     ;(async () => {
       const url = await getCurrentTabUrl()
@@ -192,22 +203,64 @@ function IndexPopup() {
     })()
   }, [])
 
-  const isLeetCodeProblem = currentUrl.startsWith(
-    "https://leetcode.com/problems/"
-  )
+  // auth session | 1st check session cache | fall back to api call
+  useEffect(() => {
+    let cancelled = false
 
+    ;(async () => {
+      setIsPending(true)
+      setError(null)
+
+      const cachedSession = await readSessionCache<SessionData>()
+
+      if (cancelled) return
+
+      if (cachedSession) {
+        setData(cachedSession)
+        setIsPending(false)
+        return
+      }
+
+      try {
+        const sessionResponse = (await authClient.getSession()) as {
+          data: SessionData
+          error: unknown
+        }
+
+        if (cancelled) return
+
+        setData(sessionResponse.data)
+        setIsPending(false)
+
+        await writeSessionCache(sessionResponse.data)
+      } catch {
+        if (cancelled) return
+
+        setError("Unexpected Error Occurred")
+        setData(null)
+        setIsPending(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // fetch problem from backend
   useEffect(() => {
     if (!data || !isLeetCodeProblem || fetched) return
 
     void loadProblem(currentUrl)
   }, [currentUrl, data, fetched, isLeetCodeProblem])
 
+  // update the timer while solving
   useEffect(() => {
     if (!isSolving) return
 
     const intervalId = window.setInterval(() => {
       setLiveNowMs(Date.now())
-    }, 10)
+    }, 50)
 
     return () => window.clearInterval(intervalId)
   }, [isSolving])
@@ -222,11 +275,10 @@ function IndexPopup() {
   if (isPending) {
     return <PopupMessage message="Loading..." />
   }
-  console.log(data)
 
   if (error) {
     // todo: better error ui
-    return <PopupMessage message="Unexpected Error Occurred" />
+    return <PopupMessage message={error} />
   }
 
   // Unauthenticated User
