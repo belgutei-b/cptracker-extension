@@ -10,7 +10,7 @@ import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 
 // TODO: add "tabs" permission in the manifest
 // TODO: change the permission to only run in leetcode.com
-// TODO: if auth fails, show that login at cptracker.org
+// TODO: if api request fails, show the error
 
 import "~style.css"
 
@@ -334,7 +334,7 @@ function IndexPopup() {
     }
   }, [])
 
-  // fetch problem from backend
+  // fetch problem from cache or backend
   useEffect(() => {
     if (!data || !isLeetCodeProblem) return
     void (async () => {
