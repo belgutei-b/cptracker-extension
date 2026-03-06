@@ -38,11 +38,6 @@ export const getStyle = (): HTMLStyleElement => {
 // Overlay on page
 const PlasmoOverlay = () => {
   return <></>
-  // return (
-  //   <div className="plasmo-z-50 plasmo-flex plasmo-fixed plasmo-top-32 plasmo-right-8">
-  //     <CountButton />
-  //   </div>
-  // )
 }
 
 export default PlasmoOverlay

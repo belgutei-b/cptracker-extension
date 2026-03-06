@@ -1,4 +1,4 @@
-type UserProblemFullClient = {
+export type UserProblemFullClient = {
   duration: number // seconds
   createdAt: string
   updatedAt: string
@@ -21,4 +21,9 @@ type UserProblemFullClient = {
     difficulty: string // "Easy" | "Medium" | "Hard"
     tags: string[]
   }
+}
+
+export type SessionProblemRecord = {
+  problem: UserProblemFullClient
+  expiresAt: number
 }

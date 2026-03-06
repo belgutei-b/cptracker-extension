@@ -1,5 +1,6 @@
 const SESSION_CACHE_KEY = "session_cache_v1"
-const SESSION_CACHE_TTL_MS = 10 * 60 * 1000
+// 60 mins
+const SESSION_CACHE_TTL_MS = 60 * 60 * 1000
 
 type SessionCacheRecord<T> = {
   data: T

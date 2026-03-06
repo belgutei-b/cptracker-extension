@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react"
+import { type UserProblemFullClient } from "types/problem"
 
 import { authClient } from "~auth/auth-client"
 import ComplexityField from "~components/complexity-field"
 import PopupMessage from "~components/popup-message"
 import { APP_BASE_URL } from "~config/base-url"
+import { readProblemCache, writeProblemCache } from "~lib/problem-cache"
 import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 
 // TODO: add "tabs" permission in the manifest
@@ -40,8 +42,8 @@ function IndexPopup() {
   const [elapsedMs, setElapsedMs] = useState<number>(0)
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null)
   const [liveNowMs, setLiveNowMs] = useState<number>(Date.now())
-  const [isSaving, setIsSaving] = useState<boolean>(false)
-  const [fetched, setFetched] = useState<boolean>(false)
+  /* To prevent from multiple api request in FINISH/START/SAVE */
+  const [isMutating, setIsMutating] = useState<boolean>(false)
   const [problem, setProblem] = useState<UserProblemFullClient | null>(null)
   const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
 
@@ -56,39 +58,82 @@ function IndexPopup() {
     "https://leetcode.com/problems/"
   )
 
-  async function loadProblem(url: string) {
-    const res = await fetch(`${APP_BASE_URL}/api/extension/problems`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ problemLink: url })
-    })
+  async function loadProblem(
+    problem: UserProblemFullClient | null,
+    url: string
+  ) {
+    let fetchedProblem = problem
+    if (!fetchedProblem) {
+      try {
+        const res = await fetch(`${APP_BASE_URL}/api/extension/problems`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ problemLink: url })
+        })
 
-    if (res.ok) {
-      const body = (await res.json()) as {
-        problem: UserProblemFullClient
+        if (!res.ok) {
+          setError("Failed to load problem data.")
+          return
+        }
+
+        const body = (await res.json()) as { problem: UserProblemFullClient }
+        fetchedProblem = body.problem
+        await writeProblemCache(url, fetchedProblem)
+      } catch {
+        setError("Failed to load problem data.")
+        return
       }
-      const durationSeconds = Math.max(0, body.problem.duration)
-      const initialElapsedMs = durationSeconds * 1000
-
-      setStatus(body.problem.status as ProblemStatus)
-      setElapsedMs(initialElapsedMs)
-      setProblem(body.problem)
-      setFetched(true)
-    } else {
-      // TODO: error handling
     }
+
+    if (!fetchedProblem) return
+
+    const durationSeconds = Math.max(0, fetchedProblem.duration)
+    const initialElapsedMs = durationSeconds * 1000
+    const statusFromApi = fetchedProblem.status as ProblemStatus
+    const now = Date.now()
+    let nextStartedAtMs: number | null = null
+
+    if (statusFromApi === "IN_PROGRESS") {
+      if (fetchedProblem.lastStartedAt) {
+        const parsedStartedAtMs = Date.parse(fetchedProblem.lastStartedAt)
+        if (!Number.isNaN(parsedStartedAtMs)) {
+          nextStartedAtMs = parsedStartedAtMs
+        }
+      }
+
+      if (nextStartedAtMs === null) {
+        nextStartedAtMs = now
+      }
+    }
+
+    setStatus(statusFromApi)
+    setElapsedMs(initialElapsedMs)
+    setStartedAtMs(nextStartedAtMs)
+    setLiveNowMs(now)
+    setProblem(fetchedProblem)
   }
 
   async function handleStart() {
-    if (!fetched || !problem) return
+    if (!problem) return
     if (isSolving) return
+    if (isMutating) return
 
+    // for rollback
     const prevStatus = status
     const prevStartedAtMs = startedAtMs
     const prevLiveNowMs = liveNowMs
+    const prevProblem = problem
 
+    // optimistic update
     const now = Date.now()
+    const nextProblem: UserProblemFullClient = {
+      ...problem,
+      status: "IN_PROGRESS",
+      lastStartedAt: new Date(now).toISOString()
+    }
+    setIsMutating(true)
+    setProblem(nextProblem)
     setStatus("IN_PROGRESS")
     setStartedAtMs(now)
     setLiveNowMs(now)
@@ -104,36 +149,59 @@ function IndexPopup() {
       )
 
       if (!res.ok) {
-        // todo: handle error case
+        // rollback
+        setProblem(prevProblem)
         setStatus(prevStatus)
         setStartedAtMs(prevStartedAtMs)
         setLiveNowMs(prevLiveNowMs)
+        await writeProblemCache(currentUrl, prevProblem)
+        return
       }
+
+      await writeProblemCache(currentUrl, nextProblem)
     } catch (err) {
       console.log(err)
-      // todo: handle error case
+      // rollback
+      setProblem(prevProblem)
       setStatus(prevStatus)
       setStartedAtMs(prevStartedAtMs)
       setLiveNowMs(prevLiveNowMs)
+      await writeProblemCache(currentUrl, prevProblem)
+    } finally {
+      setIsMutating(false)
     }
   }
 
   async function handleFinish(newStatus: "TRIED" | "SOLVED") {
     if (!isSolving || startedAtMs === null) return
-    if (!fetched || !problem) return
+    if (!problem) return
+    if (isMutating) return
 
     const prevStatus = status
     const prevStartedAtMs = startedAtMs
     const prevLiveNowMs = liveNowMs
     const prevElapsedMs = elapsedMs
+    const prevProblem = problem
 
     const now = Date.now()
     const elapsedDeltaMs = Math.max(0, now - startedAtMs)
+    const nextElapsedMs = prevElapsedMs + elapsedDeltaMs
+    const nextProblem: UserProblemFullClient = {
+      ...problem,
+      status: newStatus,
+      duration: Math.floor(nextElapsedMs / 1000),
+      triedAt:
+        newStatus === "TRIED" ? new Date(now).toISOString() : problem.triedAt,
+      solvedAt:
+        newStatus === "SOLVED" ? new Date(now).toISOString() : problem.solvedAt
+    }
 
-    setElapsedMs((prev) => prev + elapsedDeltaMs)
-
+    // optimistic update
+    setProblem(nextProblem)
+    setElapsedMs(nextElapsedMs)
     setLiveNowMs(now)
     setStatus(newStatus)
+    setIsMutating(true)
 
     try {
       const res = await fetch(
@@ -152,25 +220,41 @@ function IndexPopup() {
       )
 
       if (!res.ok) {
-        // todo: handle error case
+        // rollback
+        setProblem(prevProblem)
         setStatus(prevStatus)
         setStartedAtMs(prevStartedAtMs)
         setLiveNowMs(prevLiveNowMs)
         setElapsedMs(prevElapsedMs)
+        await writeProblemCache(currentUrl, prevProblem)
+        return
       }
+
+      await writeProblemCache(currentUrl, nextProblem)
     } catch {
-      // todo: handle error case
+      // rollback
+      setProblem(prevProblem)
       setStatus(prevStatus)
       setStartedAtMs(prevStartedAtMs)
       setLiveNowMs(prevLiveNowMs)
       setElapsedMs(prevElapsedMs)
+      await writeProblemCache(currentUrl, prevProblem)
+    } finally {
+      setIsMutating(false)
     }
   }
 
   async function handleSaveNotes() {
-    if (isSolving || !fetched || !problem || isSaving) return
+    if (isSolving || !problem || isMutating) return
 
-    setIsSaving(true)
+    // optimistic update
+    const nextProblem: UserProblemFullClient = {
+      ...problem,
+      status,
+      duration: Math.floor(elapsedMs / 1000)
+    }
+
+    setIsMutating(true)
     try {
       const res = await fetch(
         `${APP_BASE_URL}/api/extension/problems/${problem.problemId}/save`,
@@ -188,9 +272,12 @@ function IndexPopup() {
 
       if (!res.ok) {
         // todo: handle error case
+        return
       }
+
+      await writeProblemCache(currentUrl, nextProblem)
     } finally {
-      setIsSaving(false)
+      setIsMutating(false)
     }
   }
 
@@ -199,7 +286,7 @@ function IndexPopup() {
     ;(async () => {
       const url = await getCurrentTabUrl()
       setCurrentUrl(url)
-      setFetched(false)
+      setProblem(null)
     })()
   }, [])
 
@@ -249,10 +336,12 @@ function IndexPopup() {
 
   // fetch problem from backend
   useEffect(() => {
-    if (!data || !isLeetCodeProblem || fetched) return
-
-    void loadProblem(currentUrl)
-  }, [currentUrl, data, fetched, isLeetCodeProblem])
+    if (!data || !isLeetCodeProblem) return
+    void (async () => {
+      const cachedProblem = await readProblemCache(currentUrl)
+      await loadProblem(cachedProblem, currentUrl)
+    })()
+  }, [currentUrl, data, isLeetCodeProblem])
 
   // update the timer while solving
   useEffect(() => {
@@ -353,14 +442,17 @@ function IndexPopup() {
         {!isSolving && (
           <button
             onClick={handleSaveNotes}
-            disabled={!fetched || !problem || isSaving}
+            disabled={isMutating}
             className="popup-btn popup-btn--update">
-            {isSaving ? "Updating..." : "Update notes"}
+            Update notes
           </button>
         )}
 
         {!isSolving && status !== "SOLVED" && (
-          <button onClick={handleStart} className="popup-btn popup-btn--start">
+          <button
+            onClick={handleStart}
+            disabled={isMutating}
+            className="popup-btn popup-btn--start">
             ▶ Start
           </button>
         )}
@@ -369,11 +461,13 @@ function IndexPopup() {
           <>
             <button
               onClick={() => handleFinish("TRIED")}
+              disabled={isMutating}
               className="popup-btn popup-btn--tried">
               Tried
             </button>
             <button
               onClick={() => handleFinish("SOLVED")}
+              disabled={isMutating}
               className="popup-btn popup-btn--solved">
               Solved
             </button>
