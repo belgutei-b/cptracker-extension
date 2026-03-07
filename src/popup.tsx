@@ -11,12 +11,11 @@ import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 // RIGHT NOW
 
 // FUTURE
-// TODO: if api  fails, show the error
-
 // TODO: change the permission to only run in leetcode.com
 // TODO: add "tabs" permission in the manifest
 // TODO: if there is local changes, use service worker to update the db
 // TODO: publish with https://github.com/PlasmoHQ/bpp
+// TODO: update README.md
 
 import "~style.css"
 
@@ -54,6 +53,7 @@ function IndexPopup() {
   /* To prevent from multiple api request in FINISH/START/SAVE */
   const [isMutating, setIsMutating] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  const [apiError, setApiError] = useState<string | null>(null)
   const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
 
   const getCurrentTabUrl = async (): Promise<string> => {
@@ -161,18 +161,14 @@ function IndexPopup() {
       )
 
       if (!res.ok) {
-        // rollback
-        setProblem(prevProblem)
-        setStatus(prevStatus)
-        setStartedAtMs(prevStartedAtMs)
-        setLiveNowMs(prevLiveNowMs)
-        await writeProblemCache(currentUrl, prevProblem)
-        return
+        throw new Error("Error updating problem")
       }
 
       await writeProblemCache(currentUrl, nextProblem)
+      setApiError(null)
     } catch (err) {
       console.log(err)
+      setApiError("Failed to start problem")
       // rollback
       setProblem(prevProblem)
       setStatus(prevStatus)
@@ -232,18 +228,13 @@ function IndexPopup() {
       )
 
       if (!res.ok) {
-        // rollback
-        setProblem(prevProblem)
-        setStatus(prevStatus)
-        setStartedAtMs(prevStartedAtMs)
-        setLiveNowMs(prevLiveNowMs)
-        setElapsedMs(prevElapsedMs)
-        await writeProblemCache(currentUrl, prevProblem)
-        return
+        throw new Error("Error finishing problem")
       }
 
       await writeProblemCache(currentUrl, nextProblem)
+      setApiError(null)
     } catch {
+      setApiError("Failed to finish problem")
       // rollback
       setProblem(prevProblem)
       setStatus(prevStatus)
@@ -283,11 +274,13 @@ function IndexPopup() {
       )
 
       if (!res.ok) {
-        // todo: handle error case
-        return
+        throw new Error("Error saving notes")
       }
 
       await writeProblemCache(currentUrl, nextProblem)
+      setApiError(null)
+    } catch (err) {
+      setApiError("Failed to save notes")
     } finally {
       setIsMutating(false)
     }
@@ -383,11 +376,6 @@ function IndexPopup() {
     return <PopupMessage message="Loading..." />
   }
 
-  if (error) {
-    // todo: better error ui
-    return <PopupMessage message={error} />
-  }
-
   // Unauthenticated User
   if (!data) {
     return (
@@ -396,10 +384,13 @@ function IndexPopup() {
   }
 
   if (!isLeetCodeProblem) {
-    // todo: add styling
     return (
       <PopupMessage message="Open a LeetCode problem tab to start tracking." />
     )
+  }
+
+  if (error) {
+    return <PopupMessage message={error} />
   }
 
   return (
@@ -459,7 +450,7 @@ function IndexPopup() {
         />
       </div>
 
-      <div className="plasmo-flex plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-[#3e3e3e] plasmo-p-4">
+      <div className="plasmo-flex plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-[#3e3e3e] plasmo-p-4 plasmo-px-4 plasmo-py-2">
         {!isSolving && (
           <button
             onClick={handleSaveNotes}
@@ -495,6 +486,11 @@ function IndexPopup() {
           </>
         )}
       </div>
+      {apiError && (
+        <div className="plasmo-flex plasmo-justify-end plasmo-pr-4 plasmo-pb-2 plasmo-text-red-500 plasmo-text-xs plasmo-font-medium">
+          {apiError}
+        </div>
+      )}
 
       <div className="plasmo-border-t plasmo-border-[#3e3e3e] plasmo-py-2 plasmo-text-center plasmo-text-[11px] plasmo-text-stone-400">
         <a
