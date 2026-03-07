@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { type UserProblemFullClient } from "types/problem"
 
 import { authClient } from "~auth/auth-client"
@@ -8,10 +8,13 @@ import { APP_BASE_URL } from "~config/base-url"
 import { readProblemCache, writeProblemCache } from "~lib/problem-cache"
 import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 
-// TODO: add "tabs" permission in the manifest
+// RIGHT NOW
+
+// FUTURE
+// TODO: if api  fails, show the error
+
 // TODO: change the permission to only run in leetcode.com
-// TODO: if api request fails, show the error
-// TODO: fetched IN_PROGRESS problem not starting the timer
+// TODO: add "tabs" permission in the manifest
 // TODO: if there is local changes, use service worker to update the db
 // TODO: publish with https://github.com/PlasmoHQ/bpp
 
@@ -95,28 +98,31 @@ function IndexPopup() {
     if (!fetchedProblem) return
 
     const durationSeconds = Math.max(0, fetchedProblem.duration)
-    const initialElapsedMs = durationSeconds * 1000
+    const durationMs = durationSeconds * 1000
     const statusFromApi = fetchedProblem.status as ProblemStatus
-    const now = Date.now()
-    let nextStartedAtMs: number | null = null
+    const now = new Date()
+    let fetchedStartedAtMs = null
 
     if (statusFromApi === "IN_PROGRESS") {
       if (fetchedProblem.lastStartedAt) {
-        const parsedStartedAtMs = Date.parse(fetchedProblem.lastStartedAt)
-        if (!Number.isNaN(parsedStartedAtMs)) {
-          nextStartedAtMs = parsedStartedAtMs
-        }
+        fetchedStartedAtMs = Date.parse(fetchedProblem.lastStartedAt)
       }
 
-      if (nextStartedAtMs === null) {
-        nextStartedAtMs = now
+      if (Number.isFinite(fetchedStartedAtMs)) {
+        setStartedAtMs(fetchedStartedAtMs)
+      } else {
+        // fallback (invalid lastStartedAt)
+        setStartedAtMs(now.getTime())
+        persistDraft({
+          ...fetchedProblem,
+          lastStartedAt: now.toISOString()
+        })
       }
     }
 
     setStatus(statusFromApi)
-    setElapsedMs(initialElapsedMs)
-    setStartedAtMs(nextStartedAtMs)
-    setLiveNowMs(now)
+    setElapsedMs(durationMs)
+    setLiveNowMs(now.getTime())
     setProblem(fetchedProblem)
   }
 
@@ -289,9 +295,7 @@ function IndexPopup() {
 
   function persistDraft(nextProblem: UserProblemFullClient) {
     void writeProblemCache(currentUrl, {
-      ...nextProblem,
-      status,
-      duration: Math.floor(elapsedMs / 1000)
+      ...nextProblem
     })
   }
 
