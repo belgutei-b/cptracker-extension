@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { type UserProblemFullClient } from "types/problem"
 
 import { authClient } from "~auth/auth-client"
@@ -11,6 +11,9 @@ import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 // TODO: add "tabs" permission in the manifest
 // TODO: change the permission to only run in leetcode.com
 // TODO: if api request fails, show the error
+// TODO: fetched IN_PROGRESS problem not starting the timer
+// TODO: if there is local changes, use service worker to update the db
+// TODO: publish with https://github.com/PlasmoHQ/bpp
 
 import "~style.css"
 
@@ -34,17 +37,20 @@ function formatProblemTimer(totalMs: number) {
 }
 
 function IndexPopup() {
+  /* auth */
   const [data, setData] = useState<SessionData>(null)
-  const [isPending, setIsPending] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
+  const [isAuthPending, setIsAuthPending] = useState<boolean>(true)
+
   const [currentUrl, setCurrentUrl] = useState<string>("")
+  const [problem, setProblem] = useState<UserProblemFullClient | null>(null)
   const [status, setStatus] = useState<ProblemStatus>("TODO")
+  /* timer */
   const [elapsedMs, setElapsedMs] = useState<number>(0)
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null)
   const [liveNowMs, setLiveNowMs] = useState<number>(Date.now())
   /* To prevent from multiple api request in FINISH/START/SAVE */
   const [isMutating, setIsMutating] = useState<boolean>(false)
-  const [problem, setProblem] = useState<UserProblemFullClient | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
 
   const getCurrentTabUrl = async (): Promise<string> => {
@@ -281,6 +287,14 @@ function IndexPopup() {
     }
   }
 
+  function persistDraft(nextProblem: UserProblemFullClient) {
+    void writeProblemCache(currentUrl, {
+      ...nextProblem,
+      status,
+      duration: Math.floor(elapsedMs / 1000)
+    })
+  }
+
   // read the active tab URL once when the popup mounts.
   useEffect(() => {
     ;(async () => {
@@ -295,7 +309,7 @@ function IndexPopup() {
     let cancelled = false
 
     ;(async () => {
-      setIsPending(true)
+      setIsAuthPending(true)
       setError(null)
 
       const cachedSession = await readSessionCache<SessionData>()
@@ -304,7 +318,7 @@ function IndexPopup() {
 
       if (cachedSession) {
         setData(cachedSession)
-        setIsPending(false)
+        setIsAuthPending(false)
         return
       }
 
@@ -317,7 +331,7 @@ function IndexPopup() {
         if (cancelled) return
 
         setData(sessionResponse.data)
-        setIsPending(false)
+        setIsAuthPending(false)
 
         await writeSessionCache(sessionResponse.data)
       } catch {
@@ -325,7 +339,7 @@ function IndexPopup() {
 
         setError("Unexpected Error Occurred")
         setData(null)
-        setIsPending(false)
+        setIsAuthPending(false)
       }
     })()
 
@@ -361,7 +375,7 @@ function IndexPopup() {
       : 0)
   const formattedTimer = formatProblemTimer(displayedMs)
 
-  if (isPending) {
+  if (isAuthPending) {
     return <PopupMessage message="Loading..." />
   }
 
@@ -399,11 +413,12 @@ function IndexPopup() {
             id="time"
             label="Time complexity"
             value={problem?.timeComplexity ?? ""}
-            onChange={(value) =>
-              setProblem((prev) =>
-                prev ? { ...prev, timeComplexity: value } : prev
-              )
-            }
+            onChange={(value) => {
+              if (!problem) return
+              const next = { ...problem, timeComplexity: value }
+              setProblem(next)
+              persistDraft(next)
+            }}
             placeholder="O(n logn)"
             textClassName="plasmo-text-gray-200"
           />
@@ -412,11 +427,12 @@ function IndexPopup() {
             id="space"
             label="Space Complexity"
             value={problem?.spaceComplexity ?? ""}
-            onChange={(value) =>
-              setProblem((prev) =>
-                prev ? { ...prev, spaceComplexity: value } : prev
-              )
-            }
+            onChange={(value) => {
+              if (!problem) return
+              const next = { ...problem, spaceComplexity: value }
+              setProblem(next)
+              persistDraft(next)
+            }}
             placeholder="O(n)"
           />
         </div>
@@ -429,11 +445,12 @@ function IndexPopup() {
         <textarea
           id="notes"
           value={problem?.note ?? ""}
-          onChange={(e) =>
-            setProblem((prev) =>
-              prev ? { ...prev, note: e.target.value } : prev
-            )
-          }
+          onChange={(e) => {
+            if (!problem) return
+            const next = { ...problem, note: e.target.value }
+            setProblem(next)
+            persistDraft(next)
+          }}
           className="plasmo-h-32 plasmo-w-full plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200"
         />
       </div>

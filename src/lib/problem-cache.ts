@@ -3,8 +3,8 @@ import {
   type UserProblemFullClient
 } from "types/problem"
 
-// 10 mins
-const SESSION_CACHE_TTL_MS = 10 * 60 * 1000
+// 60 mins
+const SESSION_CACHE_TTL_MS = 60 * 60 * 1000
 
 function getProblemCacheKey(currentUrl: string): string | null {
   if (!currentUrl.startsWith("https://leetcode.com/problems")) {
