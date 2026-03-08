@@ -9,14 +9,12 @@ import { readProblemCache, writeProblemCache } from "~lib/problem-cache"
 import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 
 // RIGHT NOW
-// TODO: fix cors issue
 
 // FUTURE
 // TODO: change the permission to only run in leetcode.com
 // TODO: add "tabs" permission in the manifest
 // TODO: if there is local changes, use service worker to update the db
 // TODO: publish with https://github.com/PlasmoHQ/bpp
-// TODO: update README.md
 
 import "~style.css"
 
