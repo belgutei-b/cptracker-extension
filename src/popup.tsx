@@ -9,6 +9,7 @@ import { readProblemCache, writeProblemCache } from "~lib/problem-cache"
 import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 
 // RIGHT NOW
+// TODO: fix cors issue
 
 // FUTURE
 // TODO: change the permission to only run in leetcode.com

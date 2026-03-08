@@ -29,9 +29,8 @@
   "manifest": {
     "permissions": ["tabs", "storage"],
     "host_permissions": [
-      "https://leetcode.com/*",
       "http://localhost:3000/*",
-      "https://cptracker.org/*"
+      "https://www.cptracker.org/*"
     ]
   }
 }
