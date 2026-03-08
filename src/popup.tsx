@@ -11,8 +11,6 @@ import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 // RIGHT NOW
 
 // FUTURE
-// TODO: change the permission to only run in leetcode.com
-// TODO: add "tabs" permission in the manifest
 // TODO: if there is local changes, use service worker to update the db
 // TODO: publish with https://github.com/PlasmoHQ/bpp
 
@@ -56,8 +54,6 @@ function IndexPopup() {
   const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
 
   const getCurrentTabUrl = async (): Promise<string> => {
-    // TODO: add "tabs" permission in the manifest
-    // TODO: change the permission to only run in leetcode.com
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     return tab?.url || ""
   }

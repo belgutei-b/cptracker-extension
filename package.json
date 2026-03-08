@@ -27,9 +27,8 @@
     "typescript": "5.3.3"
   },
   "manifest": {
-    "permissions": ["tabs", "storage"],
+    "permissions": ["activeTab", "storage"],
     "host_permissions": [
-      "http://localhost:3000/*",
       "https://www.cptracker.org/*"
     ]
   }
