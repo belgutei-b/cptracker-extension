@@ -1,33 +1,30 @@
-This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
+<p align="center">
+  <a href="https://cptracker.org/">
+    <img src="https://github.com/belgutei-b/cptracker/blob/main/public/favicon_io/android-chrome-512x512.png" width="140px" alt="CPTracker logo" />
+  </a>
+</p>
 
-## Getting Started
+# CPTracker Extension
 
-First, run the development server:
+CPTracker Extension brings CPTracker directly into your LeetCode workflow — no tab switching. Solved count is a good metric, but it doesn't capture the hours you spent on a hard problem you didn't submit. Those sessions matter too. From the popup, you can add the current problem, start and stop the timer, write notes, and mark it Tried or Solved, all without leaving LeetCode.
 
-```bash
-pnpm dev
-# or
-npm run dev
-```
+## How it works
 
-Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
+1. Sign in at [cptracker.org](https://www.cptracker.org)
+2. Open any LeetCode problem page
+3. Open the extension popup — the current problem is auto-added to your cptracker account
+4. Start the timer and begin solving. Write down your observations, approach, and time/space complexity as you go
+5. Mark it when you're done — either **Solved** or **Tried**. Your notes and session duration are saved
+6. Check your analytics on [cptracker.org](https://www.cptracker.org) — a daily bar chart of time spent broken down by difficulty shows exactly where your hours are going
 
-You can start editing the popup by modifying `popup.tsx`. It should auto-update as you make changes. To add an options page, simply add a `options.tsx` file to the root of the project, with a react component default exported. Likewise to add a content page, add a `content.ts` file to the root of the project, importing some module and do some logic, then reload the extension on your browser.
+## Install
 
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
+[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/cptracker-extension/nknjklndejldecmlhkjjpcnnlnfnmfgo)
 
-## Making production build
+## Technology
 
-Run the following:
+Built with [Plasmo](https://docs.plasmo.com/), React, and TailwindCSS.
 
-```bash
-pnpm build
-# or
-npm run build
-```
+## License
 
-This should create a production bundle for your extension, ready to be zipped and published to the stores.
-
-## Submit to the webstores
-
-The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
+Licensed under the [MIT License](./LICENSE).
