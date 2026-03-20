@@ -19,7 +19,7 @@ CPTracker Extension brings CPTracker directly into your LeetCode workflow — no
 
 ## Install
 
-[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/cptracker-extension/nknjklndejldecmlhkjjpcnnlnfnmfgo)
+[Install from the Chrome Web Store]([https://chromewebstore.google.com/detail/cptracker-extension/nknjklndejldecmlhkjjpcnnlnfnmfgo](https://chromewebstore.google.com/detail/ojpjlobnleonmgehlhoibaicokoadcnm?utm_source=item-share-cb)
 
 ## Technology
 
