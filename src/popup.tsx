@@ -1,3 +1,4 @@
+import { Resizable, type ResizeCallback } from "re-resizable"
 import { useEffect, useRef, useState } from "react"
 import { type UserProblemFullClient } from "types/problem"
 
@@ -84,9 +85,9 @@ function IndexPopup() {
   const [error, setError] = useState<string | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
   const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
+  const popupRef = useRef<HTMLDivElement>(null)
 
   /* notes textarea height persistence */
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [initialNotesDimensions] = useState(() => ({
     height: readStoredDimension(
       NOTES_HEIGHT_STORAGE_KEY,
@@ -109,6 +110,51 @@ function IndexPopup() {
   )
   const hasExpandedNotesWidth = notesWidth > DEFAULT_NOTES_WIDTH
 
+  const syncPopupWidth = (nextNotesWidth: number) => {
+    const popupWidth = Math.max(340, nextNotesWidth + 32)
+    if (popupRef.current) {
+      popupRef.current.style.width = `${popupWidth}px`
+    }
+  }
+
+  const syncNotesDimensions = (
+    element: HTMLElement,
+    shouldPersist: boolean
+  ) => {
+    const nextHeight = clampDimension(
+      element.offsetHeight,
+      MIN_NOTES_HEIGHT,
+      MAX_NOTES_HEIGHT
+    )
+    const nextWidth = clampDimension(
+      element.offsetWidth,
+      MIN_NOTES_WIDTH,
+      MAX_NOTES_WIDTH
+    )
+
+    setNotesHeight(nextHeight)
+    setNotesWidth(nextWidth)
+
+    if (shouldPersist) {
+      localStorage.setItem(NOTES_HEIGHT_STORAGE_KEY, String(nextHeight))
+      localStorage.setItem(NOTES_WIDTH_STORAGE_KEY, String(nextWidth))
+    }
+  }
+
+  const handleNotesResize: ResizeCallback = (_event, _direction, elementRef) => {
+    syncPopupWidth(
+      clampDimension(elementRef.offsetWidth, MIN_NOTES_WIDTH, MAX_NOTES_WIDTH)
+    )
+  }
+
+  const handleNotesResizeStop: ResizeCallback = (
+    _event,
+    _direction,
+    elementRef
+  ) => {
+    syncNotesDimensions(elementRef, true)
+  }
+
   const getCurrentTabUrl = async (): Promise<string> => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     return tab?.url || ""
@@ -117,6 +163,8 @@ function IndexPopup() {
   const isLeetCodeProblem = currentUrl.startsWith(
     "https://leetcode.com/problems/"
   )
+  const shouldRenderTrackedPopup =
+    !isAuthPending && Boolean(data) && isLeetCodeProblem && !error
 
   async function loadProblem(
     problem: UserProblemFullClient | null,
@@ -417,28 +465,8 @@ function IndexPopup() {
   }, [initialNotesDimensions])
 
   useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    const observer = new ResizeObserver(() => {
-      const nextHeight = clampDimension(
-        el.offsetHeight,
-        MIN_NOTES_HEIGHT,
-        MAX_NOTES_HEIGHT
-      )
-      const nextWidth = clampDimension(
-        el.offsetWidth,
-        MIN_NOTES_WIDTH,
-        MAX_NOTES_WIDTH
-      )
-
-      localStorage.setItem(NOTES_HEIGHT_STORAGE_KEY, String(nextHeight))
-      localStorage.setItem(NOTES_WIDTH_STORAGE_KEY, String(nextWidth))
-      setNotesHeight(nextHeight)
-      setNotesWidth(nextWidth)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [problem])
+    syncPopupWidth(notesWidth)
+  }, [notesWidth, shouldRenderTrackedPopup])
 
   // update the timer while solving
   useEffect(() => {
@@ -481,6 +509,7 @@ function IndexPopup() {
 
   return (
     <div
+      ref={popupRef}
       className={`${hasExpandedNotesWidth ? "plasmo-min-w-[340px]" : "plasmo-w-[340px]"} plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl`}>
       <div className="plasmo-flex plasmo-w-full plasmo-justify-center plasmo-border-y plasmo-border-[#3e3e3e] plasmo-py-3 plasmo-text-[#ffa116]">
         <span className="plasmo-font-mono plasmo-text-2xl">
@@ -524,23 +553,80 @@ function IndexPopup() {
           className="plasmo-mb-1 plasmo-block plasmo-text-xs plasmo-font-semibold plasmo-text-stone-300">
           Notes
         </label>
-        <textarea
-          ref={textareaRef}
-          id="notes"
-          value={problem?.note ?? ""}
-          onChange={(e) => {
-            if (!problem) return
-            const next = { ...problem, note: e.target.value }
-            setProblem(next)
-            persistDraft(next)
+        <Resizable
+          defaultSize={{ width: notesWidth, height: notesHeight }}
+          minWidth={MIN_NOTES_WIDTH}
+          maxWidth={MAX_NOTES_WIDTH}
+          minHeight={MIN_NOTES_HEIGHT}
+          maxHeight={MAX_NOTES_HEIGHT}
+          enable={{
+            top: false,
+            right: false,
+            bottom: true,
+            left: true,
+            topRight: false,
+            bottomRight: false,
+            bottomLeft: false,
+            topLeft: false
           }}
-          style={{
-            height: notesHeight,
-            width: notesWidth,
-            resize: "both"
+          onResize={handleNotesResize}
+          onResizeStop={handleNotesResizeStop}
+          handleStyles={{
+            left: {
+              width: "14px",
+              left: "-7px"
+            },
+            bottom: {
+              height: "14px",
+              bottom: "-7px"
+            }
           }}
-          className="plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200 plasmo-max-w-[450px] plasmo-min-w-[308px] plasmo-min-h-[120px] plasmo-max-h-[320px]"
-        />
+          handleComponent={{
+            left: (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "14px",
+                  left: "4px",
+                  bottom: "14px",
+                  width: "2px",
+                  borderRadius: "9999px",
+                  backgroundColor: "rgba(120, 113, 108, 0.55)"
+                }}
+              />
+            ),
+            bottom: (
+              <div
+                style={{
+                  position: "absolute",
+                  left: "14px",
+                  right: "14px",
+                  bottom: "4px",
+                  height: "2px",
+                  borderRadius: "9999px",
+                  backgroundColor: "rgba(120, 113, 108, 0.55)"
+                }}
+              />
+            )
+          }}
+          className="plasmo-ml-auto plasmo-max-w-[450px] plasmo-min-w-[308px] plasmo-min-h-[120px] plasmo-max-h-[320px]">
+          <textarea
+            id="notes"
+            value={problem?.note ?? ""}
+            onChange={(e) => {
+              if (!problem) return
+              const next = { ...problem, note: e.target.value }
+              setProblem(next)
+              persistDraft(next)
+            }}
+            style={{
+              width: "100%",
+              height: "100%",
+              resize: "none"
+            }}
+            className="plasmo-block plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200"
+          />
+        </Resizable>
       </div>
 
       <div className="plasmo-flex plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-[#3e3e3e] plasmo-p-4 plasmo-px-4 plasmo-py-2">
