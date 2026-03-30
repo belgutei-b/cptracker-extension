@@ -29,7 +29,8 @@
   "manifest": {
     "permissions": ["activeTab", "storage"],
     "host_permissions": [
-      "https://www.cptracker.org/*"
+      "https://www.cptracker.org/*",
+      "http://localhost:3000/*"
     ]
   }
 }

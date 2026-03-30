@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { type UserProblemFullClient } from "types/problem"
 
 import { authClient } from "~auth/auth-client"
@@ -12,7 +12,7 @@ import { readSessionCache, writeSessionCache } from "~lib/session-cache"
 
 // FUTURE
 // TODO: if there is local changes, use service worker to update the db
-// TODO: publish with https://github.com/PlasmoHQ/bpp
+// TODO: add http://localhost:3000/* to host_permissions in dev
 
 import "~style.css"
 
@@ -51,6 +51,12 @@ function IndexPopup() {
   const [isMutating, setIsMutating] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
+  /* notes textarea height persistence */
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [notesHeight, setNotesHeight] = useState<number | null>(() => {
+    const saved = localStorage.getItem("notes-height")
+    return saved ? parseInt(saved, 10) : null
+  })
   const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
 
   const getCurrentTabUrl = async (): Promise<string> => {
@@ -349,6 +355,18 @@ function IndexPopup() {
     })()
   }, [currentUrl, data, isLeetCodeProblem])
 
+  // persist textarea height on resize
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    const observer = new ResizeObserver(() => {
+      localStorage.setItem("notes-height", String(el.offsetHeight))
+      setNotesHeight(el.offsetHeight)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [problem])
+
   // update the timer while solving
   useEffect(() => {
     if (!isSolving) return
@@ -433,6 +451,7 @@ function IndexPopup() {
           Notes
         </label>
         <textarea
+          ref={textareaRef}
           id="notes"
           value={problem?.note ?? ""}
           onChange={(e) => {
@@ -441,7 +460,8 @@ function IndexPopup() {
             setProblem(next)
             persistDraft(next)
           }}
-          className="plasmo-h-32 plasmo-w-full plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200"
+          style={notesHeight ? { height: notesHeight } : { height: 90 }}
+          className="plasmo-w-full plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200"
         />
       </div>
 
