@@ -18,6 +18,38 @@ import "~style.css"
 
 type SessionData = ReturnType<typeof authClient.useSession>["data"]
 type ProblemStatus = "TODO" | "IN_PROGRESS" | "TRIED" | "SOLVED"
+type StoredDimension = { value: number | null; isInvalid: boolean }
+
+const NOTES_HEIGHT_STORAGE_KEY = "notes-height"
+const NOTES_WIDTH_STORAGE_KEY = "notes-width"
+const DEFAULT_NOTES_HEIGHT = 150
+const MIN_NOTES_HEIGHT = 120
+const MAX_NOTES_HEIGHT = 320
+const DEFAULT_NOTES_WIDTH = 308
+const MIN_NOTES_WIDTH = 308
+const MAX_NOTES_WIDTH = 450
+
+function readStoredDimension(
+  key: string,
+  min: number,
+  max: number
+): StoredDimension {
+  const saved = localStorage.getItem(key)
+  if (saved === null) {
+    return { value: null, isInvalid: false }
+  }
+
+  const parsed = Number.parseInt(saved, 10)
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    return { value: min, isInvalid: true }
+  }
+
+  return { value: parsed, isInvalid: false }
+}
+
+function clampDimension(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
 
 function formatProblemTimer(totalMs: number) {
   const safeMs = Math.max(0, Math.floor(totalMs))
@@ -51,13 +83,31 @@ function IndexPopup() {
   const [isMutating, setIsMutating] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
+  const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
+
   /* notes textarea height persistence */
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [notesHeight, setNotesHeight] = useState<number | null>(() => {
-    const saved = localStorage.getItem("notes-height")
-    return saved ? parseInt(saved, 10) : null
-  })
-  const isSolving = status === "IN_PROGRESS" && startedAtMs !== null
+  const [initialNotesDimensions] = useState(() => ({
+    height: readStoredDimension(
+      NOTES_HEIGHT_STORAGE_KEY,
+      MIN_NOTES_HEIGHT,
+      MAX_NOTES_HEIGHT
+    ),
+    width: readStoredDimension(
+      NOTES_WIDTH_STORAGE_KEY,
+      MIN_NOTES_WIDTH,
+      MAX_NOTES_WIDTH
+    )
+  }))
+  const [notesHeight, setNotesHeight] = useState<number>(
+    initialNotesDimensions.height.value ?? DEFAULT_NOTES_HEIGHT
+  )
+
+  /* notes textarea width persistence */
+  const [notesWidth, setNotesWidth] = useState<number>(
+    initialNotesDimensions.width.value ?? DEFAULT_NOTES_WIDTH
+  )
+  const hasExpandedNotesWidth = notesWidth > DEFAULT_NOTES_WIDTH
 
   const getCurrentTabUrl = async (): Promise<string> => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -355,13 +405,36 @@ function IndexPopup() {
     })()
   }, [currentUrl, data, isLeetCodeProblem])
 
-  // persist textarea height on resize
+  // persist textarea height and width on resize
+  useEffect(() => {
+    if (initialNotesDimensions.height.isInvalid) {
+      localStorage.removeItem(NOTES_HEIGHT_STORAGE_KEY)
+    }
+
+    if (initialNotesDimensions.width.isInvalid) {
+      localStorage.removeItem(NOTES_WIDTH_STORAGE_KEY)
+    }
+  }, [initialNotesDimensions])
+
   useEffect(() => {
     const el = textareaRef.current
     if (!el) return
     const observer = new ResizeObserver(() => {
-      localStorage.setItem("notes-height", String(el.offsetHeight))
-      setNotesHeight(el.offsetHeight)
+      const nextHeight = clampDimension(
+        el.offsetHeight,
+        MIN_NOTES_HEIGHT,
+        MAX_NOTES_HEIGHT
+      )
+      const nextWidth = clampDimension(
+        el.offsetWidth,
+        MIN_NOTES_WIDTH,
+        MAX_NOTES_WIDTH
+      )
+
+      localStorage.setItem(NOTES_HEIGHT_STORAGE_KEY, String(nextHeight))
+      localStorage.setItem(NOTES_WIDTH_STORAGE_KEY, String(nextWidth))
+      setNotesHeight(nextHeight)
+      setNotesWidth(nextWidth)
     })
     observer.observe(el)
     return () => observer.disconnect()
@@ -407,7 +480,8 @@ function IndexPopup() {
   }
 
   return (
-    <div className="plasmo-w-[340px] plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
+    <div
+      className={`${hasExpandedNotesWidth ? "plasmo-min-w-[340px]" : "plasmo-w-[340px]"} plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl`}>
       <div className="plasmo-flex plasmo-w-full plasmo-justify-center plasmo-border-y plasmo-border-[#3e3e3e] plasmo-py-3 plasmo-text-[#ffa116]">
         <span className="plasmo-font-mono plasmo-text-2xl">
           {formattedTimer.main}
@@ -460,8 +534,12 @@ function IndexPopup() {
             setProblem(next)
             persistDraft(next)
           }}
-          style={notesHeight ? { height: notesHeight } : { height: 90 }}
-          className="plasmo-w-full plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200"
+          style={{
+            height: notesHeight,
+            width: notesWidth,
+            resize: "both"
+          }}
+          className="plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200 plasmo-max-w-[450px] plasmo-min-w-[308px] plasmo-min-h-[120px] plasmo-max-h-[320px]"
         />
       </div>
 
