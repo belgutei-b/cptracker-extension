@@ -1,7 +1,7 @@
 {
   "name": "cptracker-extension",
   "displayName": "CPTracker - Track your progress",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Extension support for www.cptracker.org. Direct note taking & time tracking on leetcode problems.",
   "author": "<belgutei0323@gmail.com>",
   "scripts": {
