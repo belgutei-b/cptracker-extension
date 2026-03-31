@@ -236,7 +236,7 @@ function NotesEditor({
             id="notes"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Write notes in Markdown..."
+            placeholder="Write notes (Markdown is supported)"
             style={{
               width: "100%",
               height: "100%",

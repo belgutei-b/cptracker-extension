@@ -78,7 +78,7 @@
   }
 
   .notes-markdown li + li {
-    margin-top: 4px;
+    margin-top: 1px;
   }
 
   .notes-markdown a {
