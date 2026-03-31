@@ -1,9 +1,13 @@
+export type ProblemStatus = "TODO" | "IN_PROGRESS" | "TRIED" | "SOLVED"
+
+export type ProblemDifficulty = "Easy" | "Medium" | "Hard"
+
 export type UserProblemFullClient = {
   duration: number // seconds
   createdAt: string
   updatedAt: string
   userId: string
-  status: string // "TODO" | "IN_PROGRESS" | "TRIED" | "SOLVED"
+  status: ProblemStatus
   problemId: string
   note: string
   timeComplexity: string
@@ -18,7 +22,7 @@ export type UserProblemFullClient = {
     questionId: string
     title: string
     titleSlug: string
-    difficulty: string // "Easy" | "Medium" | "Hard"
+    difficulty: ProblemDifficulty
     tags: string[]
   }
 }
