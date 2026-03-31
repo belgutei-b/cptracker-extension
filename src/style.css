@@ -28,4 +28,80 @@
   .popup-btn--solved {
     @apply plasmo-text-emerald-400;
   }
+
+  .notes-markdown {
+    @apply plasmo-h-full plasmo-overflow-auto plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-leading-5 plasmo-text-gray-200;
+  }
+
+  .notes-markdown > :first-child {
+    margin-top: 0;
+  }
+
+  .notes-markdown > :last-child {
+    margin-bottom: 0;
+  }
+
+  .notes-markdown h1 {
+    @apply plasmo-mb-3 plasmo-text-base plasmo-font-semibold plasmo-text-white;
+  }
+
+  .notes-markdown h2 {
+    @apply plasmo-mb-3 plasmo-text-sm plasmo-font-semibold plasmo-text-white;
+  }
+
+  .notes-markdown h3 {
+    @apply plasmo-mb-3 plasmo-text-[13px] plasmo-font-semibold plasmo-text-white;
+  }
+
+  .notes-markdown h4,
+  .notes-markdown h5,
+  .notes-markdown h6,
+  .notes-markdown p,
+  .notes-markdown ul,
+  .notes-markdown ol,
+  .notes-markdown pre,
+  .notes-markdown blockquote {
+    @apply plasmo-mb-3;
+  }
+
+  .notes-markdown ul,
+  .notes-markdown ol {
+    @apply plasmo-pl-5;
+  }
+
+  .notes-markdown ul {
+    list-style: disc;
+  }
+
+  .notes-markdown ol {
+    list-style: decimal;
+  }
+
+  .notes-markdown li + li {
+    margin-top: 1px;
+  }
+
+  .notes-markdown a {
+    @apply plasmo-text-sky-300 hover:plasmo-text-sky-200;
+  }
+
+  .notes-markdown blockquote {
+    @apply plasmo-border-l-2 plasmo-border-stone-600 plasmo-pl-3 plasmo-text-stone-300;
+  }
+
+  .notes-markdown code {
+    @apply plasmo-rounded plasmo-bg-[#2a2a2a] plasmo-px-1 plasmo-py-0.5 plasmo-font-mono plasmo-text-[11px] plasmo-text-stone-100;
+  }
+
+  .notes-markdown pre {
+    @apply plasmo-overflow-x-auto plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#181818] plasmo-p-3;
+  }
+
+  .notes-markdown pre code {
+    @apply plasmo-bg-transparent plasmo-p-0;
+  }
+
+  .notes-markdown hr {
+    @apply plasmo-my-3 plasmo-border-0 plasmo-border-t plasmo-border-[#3e3e3e];
+  }
 }
