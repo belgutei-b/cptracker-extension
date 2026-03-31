@@ -25,6 +25,13 @@ CPTracker Extension brings CPTracker directly into your LeetCode workflow — no
 
 Built with [Plasmo](https://docs.plasmo.com/), React, and TailwindCSS.
 
+## Submission checklist for chrome web store
+
+1. update the version number in package.json
+2. remove localhost from host permissions in package.json
+3. change the backend to allow any extension origin to enable api request from the build
+4. zip the prod in ./build/chrome-mv3-prod
+
 ## License
 
 Licensed under the [MIT License](./LICENSE).
