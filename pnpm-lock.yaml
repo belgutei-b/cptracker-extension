@@ -11,6 +11,9 @@ importers:
       better-auth:
         specifier: ^1.5.1
         version: 1.5.1(@prisma/client@7.4.2(prisma@7.4.2(@types/react@18.2.48)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(typescript@5.3.3))(typescript@5.3.3))(drizzle-orm@0.45.1(@electric-sql/pglite@0.3.15)(@prisma/client@7.4.2(prisma@7.4.2(@types/react@18.2.48)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(typescript@5.3.3))(typescript@5.3.3))(kysely@0.28.11)(mysql2@3.15.3)(postgres@3.4.7)(prisma@7.4.2(@types/react@18.2.48)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(typescript@5.3.3)))(mongodb@7.1.0)(mysql2@3.15.3)(prisma@7.4.2(@types/react@18.2.48)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(typescript@5.3.3))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(svelte@4.2.2)(vue@3.3.4)
+      markdown-to-jsx:
+        specifier: ^9.7.13
+        version: 9.7.13(react@18.2.0)(vue@3.3.4)
       plasmo:
         specifier: 0.90.5
         version: 0.90.5(@swc/core@1.15.18(@swc/helpers@0.5.19))(@swc/helpers@0.5.19)(@types/node@20.11.5)(lodash@4.17.21)(postcss@8.4.33)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -2914,6 +2917,24 @@ packages:
   make-dir@2.1.0:
     resolution: {integrity: sha512-LS9X+dc8KLxXCb8dni79fLIIUA5VyZoyjSMCwTluaXA0o27cCK0bhXkpgw+sTXVpPy/lSO57ilRixqk0vDmtRA==}
     engines: {node: '>=6'}
+
+  markdown-to-jsx@9.7.13:
+    resolution: {integrity: sha512-twSoD1A2RMx+wyYTNvHvf4JTzEr4SfkgycoSRwjbezejKhqdIXHrHaA3uEm24ET/ZLWrwSzOyWahmVULC+tTbw==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      react: '>= 16.0.0'
+      react-native: '*'
+      solid-js: '>=1.0.0'
+      vue: '>=3.0.0'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-native:
+        optional: true
+      solid-js:
+        optional: true
+      vue:
+        optional: true
 
   mdn-data@2.0.14:
     resolution: {integrity: sha512-dn6wd0uw5GsdswPFfsgMp5NSB0/aDe6fK94YJV/AJDYXL6HVLWBsxeq7js7Ad+mU2K9LAlwpk6kN2D5mwCPVow==}
@@ -6681,6 +6702,11 @@ snapshots:
       pify: 4.0.1
       semver: 5.7.2
     optional: true
+
+  markdown-to-jsx@9.7.13(react@18.2.0)(vue@3.3.4):
+    optionalDependencies:
+      react: 18.2.0
+      vue: 3.3.4
 
   mdn-data@2.0.14: {}
 

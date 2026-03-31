@@ -1,5 +1,6 @@
+import Markdown from "markdown-to-jsx"
 import { Resizable, type ResizeCallback } from "re-resizable"
-import { useEffect, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 
 type NotesEditorProps = {
   value: string
@@ -7,6 +8,7 @@ type NotesEditorProps = {
   onPopupWidthChange: (width: number) => void
 }
 
+type NotesMode = "edit" | "preview"
 type StoredDimension = { value: number | null; isInvalid: boolean }
 
 const NOTES_HEIGHT_STORAGE_KEY = "notes-height"
@@ -18,6 +20,18 @@ const DEFAULT_NOTES_WIDTH = 308
 const MIN_NOTES_WIDTH = 308
 const MAX_NOTES_WIDTH = 450
 const MIN_POPUP_WIDTH = 340
+const MARKDOWN_OPTIONS = {
+  disableParsingRawHTML: true,
+  wrapper: Fragment,
+  overrides: {
+    a: {
+      props: {
+        target: "_blank",
+        rel: "noreferrer"
+      }
+    }
+  }
+}
 
 function readStoredDimension(
   key: string,
@@ -41,11 +55,44 @@ function clampDimension(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
+function MarkdownToggle({
+  active,
+  onToggle
+}: {
+  active: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={active ? "Back to editor" : "Preview markdown"}
+      className={[
+        "plasmo-rounded-md",
+        "plasmo-border",
+        "plasmo-px-1.5",
+        "plasmo-py-0.5",
+        "plasmo-text-[10px]",
+        "plasmo-font-bold",
+        "plasmo-tracking-wide",
+        "plasmo-transition-all",
+        "plasmo-duration-150",
+        "popup-btn--start",
+        active
+          ? "plasmo-border-stone-500 plasmo-bg-stone-700"
+          : "plasmo-border-[#3e3e3e] hover:plasmo-border-stone-500"
+      ].join(" ")}>
+      Markdown
+    </button>
+  )
+}
+
 function NotesEditor({
   value,
   onChange,
   onPopupWidthChange
 }: NotesEditorProps) {
+  const [mode, setMode] = useState<NotesMode>("edit")
   const [initialNotesDimensions] = useState(() => ({
     height: readStoredDimension(
       NOTES_HEIGHT_STORAGE_KEY,
@@ -93,16 +140,6 @@ function NotesEditor({
     }
   }
 
-  const handleNotesResize: ResizeCallback = (
-    _event,
-    _direction,
-    elementRef
-  ) => {
-    syncPopupWidth(
-      clampDimension(elementRef.offsetWidth, MIN_NOTES_WIDTH, MAX_NOTES_WIDTH)
-    )
-  }
-
   const handleNotesResizeStop: ResizeCallback = (
     _event,
     _direction,
@@ -127,11 +164,17 @@ function NotesEditor({
 
   return (
     <>
-      <label
-        htmlFor="notes"
-        className="plasmo-mb-1 plasmo-block plasmo-text-xs plasmo-font-semibold plasmo-text-stone-300">
-        Notes
-      </label>
+      <div className="plasmo-mb-1 plasmo-flex plasmo-items-center plasmo-justify-between plasmo-gap-2">
+        <label
+          htmlFor="notes"
+          className="plasmo-block plasmo-text-xs plasmo-font-semibold plasmo-text-stone-300">
+          Notes
+        </label>
+        <MarkdownToggle
+          active={mode === "preview"}
+          onToggle={() => setMode(mode === "edit" ? "preview" : "edit")}
+        />
+      </div>
       <Resizable
         defaultSize={{ width: notesWidth, height: notesHeight }}
         minWidth={MIN_NOTES_WIDTH}
@@ -148,7 +191,6 @@ function NotesEditor({
           bottomLeft: false,
           topLeft: false
         }}
-        onResize={handleNotesResize}
         onResizeStop={handleNotesResizeStop}
         handleStyles={{
           left: {
@@ -189,17 +231,28 @@ function NotesEditor({
           )
         }}
         className="plasmo-ml-auto plasmo-max-w-[450px] plasmo-min-w-[308px] plasmo-min-h-[120px] plasmo-max-h-[320px]">
-        <textarea
-          id="notes"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          style={{
-            width: "100%",
-            height: "100%",
-            resize: "none"
-          }}
-          className="plasmo-block plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200"
-        />
+        {mode === "edit" ? (
+          <textarea
+            id="notes"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Write notes in Markdown..."
+            style={{
+              width: "100%",
+              height: "100%",
+              resize: "none"
+            }}
+            className="plasmo-block plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200"
+          />
+        ) : (
+          <div className="notes-markdown">
+            {value.trim() ? (
+              <Markdown options={MARKDOWN_OPTIONS}>{value}</Markdown>
+            ) : (
+              <p className="plasmo-text-stone-400">Nothing to preview yet.</p>
+            )}
+          </div>
+        )}
       </Resizable>
     </>
   )
