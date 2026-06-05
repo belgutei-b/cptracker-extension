@@ -16,6 +16,12 @@ import { useProblemTracker } from "~hooks/use-problem-tracker"
 import "~style.css"
 
 const DEFAULT_POPUP_WIDTH = 340
+const FLOATING_NOTES_STORAGE_PREFIX = "cptracker:floating-notes:"
+
+function getFloatingNotesStorageKey(url: string): string {
+  const parsedUrl = new URL(url)
+  return `${FLOATING_NOTES_STORAGE_PREFIX}${parsedUrl.origin}${parsedUrl.pathname}`
+}
 
 function IndexPopup() {
   const {
@@ -26,11 +32,6 @@ function IndexPopup() {
 
   const [currentUrl, setCurrentUrl] = useState<string>("")
   const [popupWidth, setPopupWidth] = useState<number>(DEFAULT_POPUP_WIDTH)
-
-  const getCurrentTabUrl = async (): Promise<string> => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    return tab?.url || ""
-  }
 
   const isLeetCodeProblem = currentUrl.startsWith(
     "https://leetcode.com/problems/"
@@ -56,8 +57,29 @@ function IndexPopup() {
   // read the active tab URL once when the popup mounts.
   useEffect(() => {
     ;(async () => {
-      const url = await getCurrentTabUrl()
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+      const url = tab?.url || ""
+
       setCurrentUrl(url)
+
+      if (!tab?.id || !url.startsWith("https://leetcode.com/problems/")) {
+        return
+      }
+
+      await chrome.storage.local.set({
+        [getFloatingNotesStorageKey(url)]: true
+      })
+
+      try {
+        await chrome.tabs.sendMessage(tab.id, {
+          type: "CPTRACKER_OPEN_NOTES"
+        })
+      } catch {
+        // The content script is only available on matching LeetCode pages.
+      }
     })()
   }, [])
 
