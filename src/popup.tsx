@@ -68,9 +68,26 @@ function IndexPopup() {
       if (!tab?.id || !url.startsWith("https://leetcode.com/problems/")) {
         return
       }
+    })()
+  }, [])
+
+  // for opening the floating note taker
+  // after Auth and URL checks
+  useEffect(() => {
+    if (isAuthPending) return
+    if (authError) return
+    if (!session) return
+    if (!currentUrl.startsWith("https://leetcode.com/problems/")) return
+    ;(async () => {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+
+      if (!tab?.id) return
 
       await chrome.storage.local.set({
-        [getFloatingNotesStorageKey(url)]: true
+        [getFloatingNotesStorageKey(currentUrl)]: true
       })
 
       try {
@@ -78,10 +95,10 @@ function IndexPopup() {
           type: "CPTRACKER_OPEN_NOTES"
         })
       } catch {
-        // The content script is only available on matching LeetCode pages.
+        // no content script available
       }
     })()
-  }, [])
+  }, [isAuthPending, authError, session, currentUrl])
 
   if (isAuthPending) {
     return <PopupMessage message="Loading..." />
