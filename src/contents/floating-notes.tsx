@@ -60,6 +60,11 @@ export const getStyle: PlasmoGetStyle = () => {
 }
 
 /**
+ * It is **CONTENT SCRIPT UI**
+ * It has separate React trees from the extension pop-up
+ * Importing the same hook as pop-up wouldn't share same runtime state.
+ *
+ * USE BACKGROUND SCRIPT TO TALK TO THE API
  *
  * When extension popup opens, it sends message "CPTRACKER_OPEN_NOTES"
  * After receiving message, it opens the floating note taker
@@ -78,6 +83,10 @@ const FloatingNotes = () => {
 
   const currentUrl = window.location.href
 
+  // importing useProblemTracker to content script UI wouldn't work
+  // as it would cause API request to the backend and browser would
+  // prohibit it from using that.
+  // (request is from leetcode.com not the extension)
   const {
     problem,
     status,
@@ -222,6 +231,8 @@ const FloatingNotes = () => {
             <div className="plasmo-flex-1 plasmo-overflow-auto">
               {problemError ? (
                 <div className="plasmo-p-4 plasmo-text-xs">{problemError}</div>
+              ) : !problem ? (
+                <div>Loading Problem</div>
               ) : (
                 <div
                   onKeyDownCapture={(event) => event.stopPropagation()}
@@ -232,7 +243,7 @@ const FloatingNotes = () => {
                       <ComplexityField
                         id="floating-time"
                         label="Time complexity"
-                        value={problem?.timeComplexity ?? ""}
+                        value={problem.timeComplexity}
                         onChange={(value) =>
                           updateDraft({ timeComplexity: value })
                         }
@@ -243,7 +254,7 @@ const FloatingNotes = () => {
                       <ComplexityField
                         id="floating-space"
                         label="Space Complexity"
-                        value={problem?.spaceComplexity ?? ""}
+                        value={problem.spaceComplexity}
                         onChange={(value) =>
                           updateDraft({ spaceComplexity: value })
                         }
@@ -252,7 +263,7 @@ const FloatingNotes = () => {
                     </div>
 
                     <FloatingNotesEditor
-                      value={problem?.note ?? ""}
+                      value={problem.note}
                       onChange={(value) => updateDraft({ note: value })}
                     />
                   </div>

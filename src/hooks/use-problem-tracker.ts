@@ -103,29 +103,44 @@ export function useProblemTracker({
     void (async () => {
       setProblemError(null)
 
-      const cachedProblem = await readProblemCache(currentUrl)
+      // retrieve from the cache if it exists there
+      try {
+        const cachedProblem = await readProblemCache(currentUrl)
+        if (cachedProblem) {
+          hydrateProblemState(cachedProblem)
+          return
+        }
+      } catch (err) {
+        console.log("Error retrieving from the cache")
+      }
 
       if (cancelled) return
 
-      if (cachedProblem) {
-        hydrateProblemState(cachedProblem)
-        return
-      }
-
+      // fetch problem from the API
       try {
-        const fetchedProblem = await fetchProblem(currentUrl)
+        try {
+          const fetchedProblem = await fetchProblem(currentUrl)
+        } catch (err) {
+          console.error("Error fetching from API x 2")
+          console.error(err)
+          return
+        }
 
         if (cancelled) return
 
-        await writeProblemCache(currentUrl, fetchedProblem)
+        // try {
+        //   await writeProblemCache(currentUrl, fetchedProblem)
+        // } catch (err) {
+        //   console.error("Error writing to cache")
+        // }
 
-        if (cancelled) return
+        // if (cancelled) return
 
-        hydrateProblemState(fetchedProblem)
+        // hydrateProblemState(fetchedProblem)
       } catch {
         if (cancelled) return
 
-        setProblemError("Failed to load problem data.")
+        setProblemError("Failed to load problem data from API and Cache.")
       }
     })()
 

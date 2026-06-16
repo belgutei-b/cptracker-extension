@@ -60,6 +60,7 @@ export async function fetchProblem(
     body: { problemLink }
   })
   const body = (await response.json()) as FetchProblemResponse
+  console.error(body.problem.problemId)
   return body.problem
 }
 
