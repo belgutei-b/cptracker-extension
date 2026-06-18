@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
+import { type SwResult } from "types/service-worker"
 
-import { authClient } from "~auth/auth-client"
-import { readSessionCache, writeSessionCache } from "~lib/session-cache"
+import { sendToBackground } from "@plasmohq/messaging"
 
-type SessionData = ReturnType<typeof authClient.useSession>["data"]
+import { type SessionData } from "~auth/auth-client"
 
 type UseAuthSessionResult = {
   session: SessionData
@@ -24,37 +24,27 @@ export function useAuthSession(): UseAuthSessionResult {
       setIsLoading(true)
       setError(null)
 
-      // retrieve the session from the local storage
-      const cachedSession = await readSessionCache<SessionData>()
-
-      if (cancelled) return
-
-      if (cachedSession) {
-        setSession(cachedSession)
-        setIsLoading(false)
-        return
-      }
-
-      // auth request to the backend
       try {
-        const sessionResponse = (await authClient.getSession()) as {
-          data: SessionData
-          error: unknown
-        }
+        // session (with caching) is resolved entirely in the service worker
+        const res = await sendToBackground<undefined, SwResult<SessionData>>({
+          name: "get-session"
+        })
 
         if (cancelled) return
 
-        setSession(sessionResponse.data)
-        setIsLoading(false)
-
-        // write the session to the local storage
-        await writeSessionCache(sessionResponse.data)
+        if (res.ok) {
+          setSession(res.data)
+        } else {
+          setError(res.error)
+          setSession(null)
+        }
       } catch {
         if (cancelled) return
 
         setError("Unexpected Error Occurred")
         setSession(null)
-        setIsLoading(false)
+      } finally {
+        if (!cancelled) setIsLoading(false)
       }
     })()
 

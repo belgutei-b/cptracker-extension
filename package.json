@@ -1,7 +1,7 @@
 {
   "name": "cptracker-extension",
   "displayName": "CPTracker - Track your progress",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Extension support for www.cptracker.org. Direct note taking & time tracking on leetcode problems.",
   "author": "<belgutei0323@gmail.com>",
   "scripts": {
@@ -10,6 +10,7 @@
     "package": "plasmo package"
   },
   "dependencies": {
+    "@plasmohq/messaging": "^0.7.2",
     "better-auth": "^1.5.1",
     "markdown-to-jsx": "^9.7.13",
     "plasmo": "0.90.5",

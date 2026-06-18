@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { type ProblemStatus, type UserProblemFullClient } from "types/problem"
 
-import { readProblemCache, writeProblemCache } from "~lib/problem-cache"
+import { readProblemCache, writeProblemCache } from "~background/lib/problem-cache"
 import {
   fetchProblem,
   finishProblem,
