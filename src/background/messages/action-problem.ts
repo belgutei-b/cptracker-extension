@@ -15,26 +15,31 @@ import {
 } from "~background/lib/problem-api"
 import { SWFail, SWOk } from "~background/types"
 
-// start / finish / update
+export type ActionResponseBody = { duration: number } | { lastStartedAt: string } | null
+
+/* start / finish / update */
 const handler: PlasmoMessaging.MessageHandler<
   { type: ProblemAction; input: ProblemActionInput },
-  SwResult<{ success: boolean }>
+  SwResult<{ success: boolean; body: ActionResponseBody }>
 > = async (req, res) => {
   try {
     if (!req.body) {
       throw new Error("Request body missing")
     }
 
+    let resBody: ActionResponseBody = null
     if (req.body.type === ProblemAction.StartAction) {
-      await startProblem(req.body.input.problemId)
+      const apiRes = await startProblem(req.body.input.problemId)
+      resBody = (await apiRes.json()) as { lastStartedAt: string }
     }
     if (req.body.type === ProblemAction.FinishAction) {
-      await finishProblem(req.body.input)
+      const apiRes = await finishProblem(req.body.input)
+      resBody = (await apiRes.json()) as { duration: number }
     }
     if (req.body.type === ProblemAction.UpdateAction) {
       await saveProblem(req.body.input)
     }
-    res.send(SWOk({ success: true }))
+    res.send(SWOk({ success: true, body: resBody }))
   } catch (err) {
     res.send(SWFail((err as Error).message))
   }

@@ -50,8 +50,8 @@ export async function fetchProblem(
 /**
  * Starting problem (TODO | TRIED -> IN_PROGRESS)
  */
-export async function startProblem(problemId: string): Promise<void> {
-  await requestProblemApi({
+export async function startProblem(problemId: string): Promise<Response> {
+  return await requestProblemApi({
     path: `/api/extension/problems/${problemId}/start`,
     method: "POST"
   })
@@ -60,8 +60,10 @@ export async function startProblem(problemId: string): Promise<void> {
 /**
  * Finishing problem (IN_PROGRESS -> SOLVED TRIED)
  */
-export async function finishProblem(input: ProblemActionInput): Promise<void> {
-  await requestProblemApi({
+export async function finishProblem(
+  input: ProblemActionInput
+): Promise<Response> {
+  return await requestProblemApi({
     path: `/api/extension/problems/${input.problemId}/finish`,
     method: "POST",
     body: {
@@ -76,8 +78,10 @@ export async function finishProblem(input: ProblemActionInput): Promise<void> {
 /**
  * Updating notes / time & space complexity
  */
-export async function saveProblem(input: ProblemActionInput): Promise<void> {
-  await requestProblemApi({
+export async function saveProblem(
+  input: ProblemActionInput
+): Promise<Response> {
+  return await requestProblemApi({
     path: `/api/extension/problems/${input.problemId}/save`,
     method: "PATCH",
     body: {

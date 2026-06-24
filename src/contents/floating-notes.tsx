@@ -12,6 +12,7 @@ import { type SwResult } from "types/service-worker"
 import { sendToBackground } from "@plasmohq/messaging"
 
 import { type SessionData } from "~auth/auth-client"
+import type { ActionResponseBody } from "~background/messages/action-problem"
 import ComplexityField from "~components/complexity-field"
 import NotesEditor from "~components/notes-editor"
 import PopupMessage from "~components/popup-message"
@@ -30,11 +31,14 @@ export const getStyle: PlasmoGetStyle = () => {
 
 const DEFAULT_POPUP_WIDTH = 340
 
+// TODO: write to cache / use onChange on text fields
+// TODO: show errors to the client if SW requests fail
 export default function FloatingNotes() {
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [problem, setProblem] = useState<UserProblemFullClient | null>(null)
+  const [isMutating, setIsMutating] = useState<boolean>(false)
 
   const [popupWidth, setPopupWidth] = useState<number>(DEFAULT_POPUP_WIDTH)
 
@@ -89,6 +93,7 @@ export default function FloatingNotes() {
       const session = await getSession()
       if (cancelled) return
 
+      console.error("session.success", session.success)
       if (session.success) {
         await getProblem()
       }
@@ -106,14 +111,17 @@ export default function FloatingNotes() {
   /**
    * Start problem by calling Service Worker (SW).
    * TODO or TRIED -> IN_PROGRESS
+   * It expects the SW response to have lastStartedAt field
+   * (better handle that in the future)
    */
   async function handleStart() {
+    setIsMutating(true)
     try {
       if (!problem) throw new Error("User problem hasn't loaded")
 
       const res = await sendToBackground<
         { type: ProblemAction; input: ProblemActionInput },
-        SwResult<UserProblemFullClient>
+        SwResult<{ success: boolean; body: ActionResponseBody }>
       >({
         name: "action-problem",
         body: {
@@ -128,11 +136,20 @@ export default function FloatingNotes() {
         throw new Error("Error updating notes")
       }
 
-      setProblem({ ...problem, status: "IN_PROGRESS" })
-      // TODO: also update lastStartedAt on problem
-      // it is in res
+      const body = res.data.body
+      // lastStartedAt should exist in body | checking to make sure
+      // it is in response body
+      if (body && "lastStartedAt" in body) {
+        setProblem({
+          ...problem,
+          lastStartedAt: body.lastStartedAt,
+          status: "IN_PROGRESS"
+        })
+      }
     } catch (err) {
       console.error("Error: handleStart function")
+    } finally {
+      setIsMutating(false)
     }
   }
 
@@ -141,12 +158,13 @@ export default function FloatingNotes() {
    * by calling Service Worker (SW)
    */
   async function handleUpdate() {
+    setIsMutating(true)
     try {
       if (!problem) throw new Error("User problem hasn't loaded")
 
       const res = await sendToBackground<
         { type: ProblemAction; input: ProblemActionInput },
-        SwResult<UserProblemFullClient>
+        SwResult<{ success: boolean; body: ActionResponseBody }>
       >({
         name: "action-problem",
         body: {
@@ -165,6 +183,8 @@ export default function FloatingNotes() {
       }
     } catch (err) {
       console.error("Error: handleUpdate function")
+    } finally {
+      setIsMutating(false)
     }
   }
 
@@ -177,12 +197,14 @@ export default function FloatingNotes() {
    * @param newStatus Solved or Tried
    */
   async function handleFinish(newStatus: ProblemStatus) {
+    setIsMutating(true)
     try {
       if (!problem) throw new Error("User problem hasn't loaded")
 
+      // TODO: update SwResult (reference handleStart)
       const res = await sendToBackground<
         { type: ProblemAction; input: ProblemActionInput },
-        SwResult<UserProblemFullClient>
+        SwResult<{ success: boolean; body: ActionResponseBody }>
       >({
         name: "action-problem",
         body: {
@@ -199,10 +221,15 @@ export default function FloatingNotes() {
 
       if (!res.ok) throw new Error("Error finishing problem")
 
-      setProblem({ ...problem, status: newStatus })
-      // TODO: update duration on problem
+      const body = res.data.body
+      /* Expecting duration in body in the response of SW */
+      if (body && "duration" in body) {
+        setProblem({ ...problem, status: newStatus, duration: body.duration })
+      }
     } catch (err) {
       console.error("Error: handleFinish function")
+    } finally {
+      setIsMutating(false)
     }
   }
 
@@ -288,13 +315,14 @@ export default function FloatingNotes() {
         {!(problem.status === "IN_PROGRESS") && (
           <button
             onClick={handleUpdate}
+            disabled={isMutating}
             className="popup-btn popup-btn--update">
             Update notes
           </button>
         )}
 
         {!(problem.status === "IN_PROGRESS") && problem.status !== "SOLVED" && (
-          <button onClick={handleStart} className="popup-btn popup-btn--start">
+          <button onClick={handleStart} disabled={isMutating} className="popup-btn popup-btn--start">
             ▶ Start
           </button>
         )}
@@ -303,11 +331,13 @@ export default function FloatingNotes() {
           <>
             <button
               onClick={() => handleFinish("TRIED")}
+              disabled={isMutating}
               className="popup-btn popup-btn--tried">
               Tried
             </button>
             <button
               onClick={() => handleFinish("SOLVED")}
+              disabled={isMutating}
               className="popup-btn popup-btn--solved">
               Solved
             </button>

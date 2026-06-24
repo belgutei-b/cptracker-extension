@@ -20,6 +20,7 @@ const handler: PlasmoMessaging.MessageHandler<
   SwResult<UserProblemFullClient>
 > = async (req, res) => {
   try {
+    console.log("SW: starting get-problem")
     if (!req.body?.url) {
       throw new Error("Missing url")
     }
@@ -37,6 +38,7 @@ const handler: PlasmoMessaging.MessageHandler<
 
     return res.send(SWOk(problem))
   } catch (err) {
+    console.error("SW: get-problem failed")
     res.send(SWFail((err as Error).message))
   }
 }
