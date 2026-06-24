@@ -6,6 +6,7 @@ import styleText from "data-text:~style.css"
 import type { PlasmoCSConfig, PlasmoGetStyle } from "plasmo"
 import { useEffect, useState } from "react"
 import type { ProblemStatus, UserProblemFullClient } from "types/problem"
+import { ProblemAction, type ProblemActionInput } from "types/problem"
 import { type SwResult } from "types/service-worker"
 
 import { sendToBackground } from "@plasmohq/messaging"
@@ -29,25 +30,12 @@ export const getStyle: PlasmoGetStyle = () => {
 
 const DEFAULT_POPUP_WIDTH = 340
 
-type Draft = {
-  note: string
-  timeComplexity: string
-  spaceComplexity: string
-}
-
-const EMPTY_DRAFT: Draft = {
-  note: "",
-  timeComplexity: "",
-  spaceComplexity: ""
-}
-
 export default function FloatingNotes() {
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [problem, setProblem] = useState<UserProblemFullClient | null>(null)
 
-  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
   const [popupWidth, setPopupWidth] = useState<number>(DEFAULT_POPUP_WIDTH)
 
   useEffect(() => {
@@ -115,23 +103,109 @@ export default function FloatingNotes() {
     }
   }, [])
 
-  // Seed the editable draft from the problem returned by the SW.
-  useEffect(() => {
-    if (problem) {
-      setDraft({
-        note: problem.note ?? "",
-        timeComplexity: problem.timeComplexity ?? "",
-        spaceComplexity: problem.spaceComplexity ?? ""
+  /**
+   * Start problem by calling Service Worker (SW).
+   * TODO or TRIED -> IN_PROGRESS
+   */
+  async function handleStart() {
+    try {
+      if (!problem) throw new Error("User problem hasn't loaded")
+
+      const res = await sendToBackground<
+        { type: ProblemAction; input: ProblemActionInput },
+        SwResult<UserProblemFullClient>
+      >({
+        name: "action-problem",
+        body: {
+          type: ProblemAction.StartAction,
+          input: {
+            problemId: problem.problemId
+          }
+        }
       })
+
+      if (!res.ok) {
+        throw new Error("Error updating notes")
+      }
+
+      setProblem({ ...problem, status: "IN_PROGRESS" })
+      // TODO: also update lastStartedAt on problem
+      // it is in res
+    } catch (err) {
+      console.error("Error: handleStart function")
     }
-  }, [problem])
+  }
 
-  // Local-only draft update — backend mutations are intentionally skipped for now.
-  const updateDraft = (patch: Partial<Draft>) =>
-    setDraft((prev) => ({ ...prev, ...patch }))
+  /**
+   * Updating notes, time & space complexity
+   * by calling Service Worker (SW)
+   */
+  async function handleUpdate() {
+    try {
+      if (!problem) throw new Error("User problem hasn't loaded")
 
-  const status: ProblemStatus = problem?.status ?? "TODO"
-  const isSolving = status === "IN_PROGRESS"
+      const res = await sendToBackground<
+        { type: ProblemAction; input: ProblemActionInput },
+        SwResult<UserProblemFullClient>
+      >({
+        name: "action-problem",
+        body: {
+          type: ProblemAction.UpdateAction,
+          input: {
+            problemId: problem.problemId,
+            note: problem.note,
+            timeComplexity: problem.timeComplexity,
+            spaceComplexity: problem.spaceComplexity
+          }
+        }
+      })
+
+      if (!res.ok) {
+        throw new Error("Error updating notes")
+      }
+    } catch (err) {
+      console.error("Error: handleUpdate function")
+    }
+  }
+
+  /**
+   * IN_PROGRESS problem becomes TRIED or SOLVED by
+   * calling SW
+   * There is no thorough check on problem's current
+   * status and newStatus. Backend is responsible for
+   * correct status transition.
+   * @param newStatus Solved or Tried
+   */
+  async function handleFinish(newStatus: ProblemStatus) {
+    try {
+      if (!problem) throw new Error("User problem hasn't loaded")
+
+      const res = await sendToBackground<
+        { type: ProblemAction; input: ProblemActionInput },
+        SwResult<UserProblemFullClient>
+      >({
+        name: "action-problem",
+        body: {
+          type: ProblemAction.FinishAction,
+          input: {
+            problemId: problem.problemId,
+            newStatus,
+            note: problem.note,
+            timeComplexity: problem.timeComplexity,
+            spaceComplexity: problem.spaceComplexity
+          }
+        }
+      })
+
+      if (!res.ok) throw new Error("Error finishing problem")
+
+      setProblem({ ...problem, status: newStatus })
+      // TODO: update duration on problem
+    } catch (err) {
+      console.error("Error: handleFinish function")
+    }
+  }
+
   const elapsedMs = (problem?.duration ?? 0) * 1000
   const startedAtMs = problem?.lastStartedAt
     ? Date.parse(problem.lastStartedAt)
@@ -176,7 +250,7 @@ export default function FloatingNotes() {
       <ProblemTimer
         elapsedMs={elapsedMs}
         startedAtMs={startedAtMs}
-        isSolving={isSolving}
+        isSolving={problem.status === "IN_PROGRESS"}
       />
 
       <div className="plasmo-px-4 plasmo-pt-3 plasmo-pb-0">
@@ -184,8 +258,10 @@ export default function FloatingNotes() {
           <ComplexityField
             id="time"
             label="Time complexity"
-            value={draft.timeComplexity}
-            onChange={(value) => updateDraft({ timeComplexity: value })}
+            value={problem.timeComplexity}
+            onChange={(value) =>
+              setProblem({ ...problem, timeComplexity: value })
+            }
             placeholder="O(n logn)"
             textClassName="plasmo-text-gray-200"
           />
@@ -193,32 +269,48 @@ export default function FloatingNotes() {
           <ComplexityField
             id="space"
             label="Space Complexity"
-            value={draft.spaceComplexity}
-            onChange={(value) => updateDraft({ spaceComplexity: value })}
+            value={problem.spaceComplexity}
+            onChange={(value) =>
+              setProblem({ ...problem, spaceComplexity: value })
+            }
             placeholder="O(n)"
           />
         </div>
 
         <NotesEditor
-          value={draft.note}
-          onChange={(value) => updateDraft({ note: value })}
+          value={problem.note}
+          onChange={(value) => setProblem({ ...problem, note: value })}
           onPopupWidthChange={setPopupWidth}
         />
       </div>
 
       <div className="plasmo-flex plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-[#3e3e3e] plasmo-p-4 plasmo-px-4 plasmo-py-2">
-        {!isSolving && (
-          <button className="popup-btn popup-btn--update">Update notes</button>
+        {!(problem.status === "IN_PROGRESS") && (
+          <button
+            onClick={handleUpdate}
+            className="popup-btn popup-btn--update">
+            Update notes
+          </button>
         )}
 
-        {!isSolving && status !== "SOLVED" && (
-          <button className="popup-btn popup-btn--start">▶ Start</button>
+        {!(problem.status === "IN_PROGRESS") && problem.status !== "SOLVED" && (
+          <button onClick={handleStart} className="popup-btn popup-btn--start">
+            ▶ Start
+          </button>
         )}
 
-        {status === "IN_PROGRESS" && (
+        {problem.status === "IN_PROGRESS" && (
           <>
-            <button className="popup-btn popup-btn--tried">Tried</button>
-            <button className="popup-btn popup-btn--solved">Solved</button>
+            <button
+              onClick={() => handleFinish("TRIED")}
+              className="popup-btn popup-btn--tried">
+              Tried
+            </button>
+            <button
+              onClick={() => handleFinish("SOLVED")}
+              className="popup-btn popup-btn--solved">
+              Solved
+            </button>
           </>
         )}
       </div>

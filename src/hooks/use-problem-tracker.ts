@@ -7,8 +7,7 @@ import {
   finishProblem,
   saveProblem,
   startProblem,
-  type FinishProblemStatus
-} from "~services/problem-api"
+} from "~background/lib/problem-api"
 
 type UseProblemTrackerOptions = {
   currentUrl: string
@@ -30,7 +29,7 @@ type UseProblemTrackerResult = {
   apiError: string | null
   updateDraft: (patch: ProblemDraftPatch) => void
   start: () => Promise<void>
-  finish: (newStatus: FinishProblemStatus) => Promise<void>
+  finish: (newStatus: ProblemStatus) => Promise<void>
   saveNotes: () => Promise<void>
 }
 
@@ -181,7 +180,7 @@ export function useProblemTracker({
     }
   }
 
-  async function finish(newStatus: FinishProblemStatus) {
+  async function finish(newStatus: ProblemStatus) {
     if (!isSolving || startedAtMs === null) return
     if (!problem) return
     if (isMutating) return
@@ -241,6 +240,7 @@ export function useProblemTracker({
 
     try {
       await saveProblem({
+        newStatus: problem.status, // TODO: allow null or handle it (current status shouldn't be here)
         problemId: problem.problemId,
         note: problem.note,
         timeComplexity: problem.timeComplexity,

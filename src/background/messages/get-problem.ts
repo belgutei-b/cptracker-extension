@@ -13,7 +13,7 @@ import {
   writeProblemCache
 } from "~background/lib/problem-cache"
 import { SWFail, SWOk } from "~background/types"
-import { fetchProblem } from "~services/problem-api"
+import { fetchProblem } from "~background/lib/problem-api"
 
 const handler: PlasmoMessaging.MessageHandler<
   { url: string },
