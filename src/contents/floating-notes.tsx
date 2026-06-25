@@ -15,7 +15,6 @@ import { sendToBackground } from "@plasmohq/messaging"
 
 import { type SessionData } from "~auth/auth-client"
 import type { ActionResponseBody } from "~background/messages/action-problem"
-import ComplexityField from "~components/complexity-field"
 import NotesEditor from "~components/notes-editor"
 import PopupMessage from "~components/popup-message"
 import ProblemTimer from "~components/problem-timer"
@@ -33,9 +32,9 @@ export const getStyle: PlasmoGetStyle = () => {
 
 const DEFAULT_POPUP_WIDTH = 340
 const DEFAULT_POPUP_HEIGHT = 460
-const MIN_POPUP_WIDTH = 340
+const MIN_POPUP_WIDTH = 260
 const MAX_POPUP_WIDTH = 600
-const MIN_POPUP_HEIGHT = 360
+const MIN_POPUP_HEIGHT = 220
 const MAX_POPUP_HEIGHT = 700
 
 // Single global layout shared across every LeetCode problem (not per-URL),
@@ -447,30 +446,7 @@ export default function FloatingNotes() {
               </button>
             </div>
 
-            <div className="plasmo-flex plasmo-min-h-0 plasmo-flex-1 plasmo-flex-col plasmo-px-4 plasmo-pt-3">
-              <div className="plasmo-mb-4 plasmo-grid plasmo-flex-none plasmo-grid-cols-2 plasmo-gap-4">
-                <ComplexityField
-                  id="time"
-                  label="Time complexity"
-                  value={problem.timeComplexity}
-                  onChange={(value) =>
-                    setProblem({ ...problem, timeComplexity: value })
-                  }
-                  placeholder="O(n logn)"
-                  textClassName="plasmo-text-gray-200"
-                />
-
-                <ComplexityField
-                  id="space"
-                  label="Space Complexity"
-                  value={problem.spaceComplexity}
-                  onChange={(value) =>
-                    setProblem({ ...problem, spaceComplexity: value })
-                  }
-                  placeholder="O(n)"
-                />
-              </div>
-
+            <div className="plasmo-flex plasmo-min-h-0 plasmo-flex-1 plasmo-flex-col plasmo-px-2 plasmo-pt-3">
               <div className="plasmo-min-h-0 plasmo-flex-1">
                 <NotesEditor
                   value={problem.note}
@@ -479,7 +455,7 @@ export default function FloatingNotes() {
               </div>
             </div>
 
-            <div className="plasmo-flex plasmo-flex-none plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-[#3e3e3e] plasmo-p-4 plasmo-px-4 plasmo-py-2">
+            <div className="plasmo-flex plasmo-flex-none plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-[#3e3e3e] plasmo-px-2 plasmo-py-2">
               {!(problem.status === "IN_PROGRESS") && (
                 <button
                   onClick={handleUpdate}

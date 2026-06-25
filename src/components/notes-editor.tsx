@@ -58,7 +58,7 @@ function NotesEditor({ value, onChange }: NotesEditorProps) {
 
   return (
     <div className="plasmo-flex plasmo-h-full plasmo-min-h-0 plasmo-flex-col">
-      <div className="plasmo-mb-1 plasmo-flex plasmo-flex-none plasmo-items-center plasmo-justify-between plasmo-gap-2">
+      <div className="plasmo-mb-2 plasmo-flex plasmo-flex-none plasmo-items-center plasmo-justify-between plasmo-gap-2">
         <label
           htmlFor="notes"
           className="plasmo-block plasmo-text-xs plasmo-font-semibold plasmo-text-stone-300">
@@ -82,7 +82,7 @@ function NotesEditor({ value, onChange }: NotesEditorProps) {
               height: "100%",
               resize: "none"
             }}
-            className="plasmo-block plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-xs plasmo-text-gray-200"
+            className="plasmo-block plasmo-rounded-xl plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-p-2 plasmo-text-sm plasmo-text-gray-200"
           />
         ) : (
           <div className="notes-markdown plasmo-h-full plasmo-overflow-auto">
