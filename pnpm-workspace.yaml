@@ -1,0 +1,10 @@
+allowBuilds:
+  '@parcel/watcher': true
+  '@prisma/engines': false
+  '@swc/core': true
+  esbuild: true
+  less: false
+  lmdb: true
+  msgpackr-extract: true
+  prisma: false
+  sharp: true

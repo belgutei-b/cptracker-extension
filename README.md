@@ -25,12 +25,39 @@ CPTracker Extension brings CPTracker directly into your LeetCode workflow — no
 
 Built with [Plasmo](https://docs.plasmo.com/), React, and TailwindCSS.
 
+## File Structure
+
+```
+src/
+├── popup.tsx                 # toolbar popup — tells the page to open the panel
+├── contents/
+│   └── floating-notes.tsx    # content script injected into leetcode.com/problems/*
+├── background/               # service worker
+│   ├── messages/             # SW handlers — one file = one message name
+│   │   ├── get-session.ts        # cached auth session
+│   │   ├── get-problem.ts        # cached problem fetch
+│   │   ├── action-problem.ts     # start / finish / update
+│   │   └── set-problem-cache.ts  # persist local edits (notes)
+│   └── lib/                  # API calls + caching, no messaging
+│       ├── problem-api.ts        # fetch/start/finish/save REST calls
+│       ├── problem-cache.ts      # chrome.storage.session problem cache
+│       └── session-cache.ts      # chrome.storage.session auth cache
+├── hooks/                    # panel state (problem data, drag/resize layout)
+└── auth/auth-client.ts       # better-auth client
+```
+
 ## Submission checklist for chrome web store
 
 1. update the version number in package.json
 2. remove localhost from host permissions in package.json
 3. change the backend to allow any extension origin to enable api request from the build
 4. zip the prod in ./build/chrome-mv3-prod
+
+## Extension Work Flow
+
+1. User presses the extension icon in the browser tab which opens the Popup (@/src/popup.tsx)
+2. If the current tab is in leetcode problem, the pop-up sends a message using Chrome API and the listener is in @/src/contents/floating-notes.tsx.
+3. From here, floating-notes shows the react component containing timer & notes section and is also responsible for calling the CPTracker backend API using service worker.
 
 ## License
 

@@ -100,6 +100,21 @@ export default function FloatingNotes() {
   const [problem, setProblem] = useState<UserProblemFullClient | null>(null)
   const [isMutating, setIsMutating] = useState<boolean>(false)
 
+  // Refs backing the cache flush below. The unload listeners are registered
+  // once, so they must read refs — closing over `problem` would pin them to
+  // its value on first render.
+  const problemRef = useRef<UserProblemFullClient | null>(null)
+  // The URL captured when the problem was fetched. LeetCode routes
+  // client-side, so reading window.location.href at flush time risks writing
+  // this problem's data under the next problem's cache key.
+  const loadedUrlRef = useRef<string>("")
+  // Last note value handed to the cache; lets us skip no-op writes.
+  const lastCachedNoteRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    problemRef.current = problem
+  }, [problem])
+
   // Outer popup size & drag position. Persisted through all problems
   const dragNodeRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({
@@ -185,18 +200,23 @@ export default function FloatingNotes() {
 
     async function getProblem() {
       try {
+        const url = window.location.href
         const res = await sendToBackground<
           { url: string },
           SwResult<UserProblemFullClient>
         >({
           name: "get-problem",
           body: {
-            url: window.location.href
+            url
           }
         })
 
         if (res.ok) {
           setProblem(res.data)
+          // Baseline for the flush: this problem's key, and the note as it
+          // arrived, so an untouched panel never messages the SW.
+          loadedUrlRef.current = url
+          lastCachedNoteRef.current = res.data.note
         } else {
           setError(res.error)
         }
@@ -224,6 +244,49 @@ export default function FloatingNotes() {
 
     return () => {
       cancelled = true
+    }
+  }, [])
+
+  /**
+   * Persist the in-memory problem (notes included) into the session cache.
+   * No API call — the backend is only touched by Start / Tried / Solved /
+   * Update. Content scripts can't reach chrome.storage.session, so this goes
+   * through the `cache-problem` service worker handler.
+   */
+  const flushToCache = () => {
+    const current = problemRef.current
+    if (!current || !loadedUrlRef.current) return
+    // Nothing typed since the last write -> skip the round trip.
+    if (current.note === lastCachedNoteRef.current) return
+
+    lastCachedNoteRef.current = current.note
+
+    void sendToBackground<
+      { url: string; problem: UserProblemFullClient },
+      SwResult<null>
+    >({
+      name: "cache-problem",
+      body: { url: loadedUrlRef.current, problem: current }
+    }).catch((err) => {
+      console.error("Error: flushToCache", err)
+    })
+  }
+
+  // Flush on the ways a note can otherwise be lost: tab switch, reload and
+  // navigation. visibilitychange is the reliable signal; pagehide and the
+  // cleanup are backstops.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flushToCache()
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("pagehide", flushToCache)
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("pagehide", flushToCache)
+      flushToCache()
     }
   }, [])
 
@@ -439,7 +502,10 @@ export default function FloatingNotes() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  flushToCache()
+                  setIsOpen(false)
+                }}
                 aria-label="Close"
                 className="cp-no-drag plasmo-flex plasmo-basis-[15%] plasmo-items-center plasmo-justify-center plasmo-border-y plasmo-border-l plasmo-border-[#3e3e3e] plasmo-text-lg plasmo-text-stone-400 hover:plasmo-bg-white/10 hover:plasmo-text-white">
                 ✕

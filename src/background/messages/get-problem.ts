@@ -20,7 +20,6 @@ const handler: PlasmoMessaging.MessageHandler<
   SwResult<UserProblemFullClient>
 > = async (req, res) => {
   try {
-    console.log("SW: starting get-problem")
     if (!req.body?.url) {
       throw new Error("Missing url")
     }
@@ -28,9 +27,11 @@ const handler: PlasmoMessaging.MessageHandler<
     // cache hit -> return immediately, no API request
     const cached = await readProblemCache(req.body.url)
     if (cached) {
+      console.error("RETRIEVING FROM THE CACHE")
       return res.send(SWOk(cached))
     }
 
+    console.error("Cache miss. about to call the backend")
     // cache miss -> hit the backend
     const problem = await fetchProblem(req.body.url)
 
