@@ -108,8 +108,10 @@ export default function FloatingNotes() {
   // client-side, so reading window.location.href at flush time risks writing
   // this problem's data under the next problem's cache key.
   const loadedUrlRef = useRef<string>("")
-  // Last note value handed to the cache; lets us skip no-op writes.
-  const lastCachedNoteRef = useRef<string | null>(null)
+  // Last note value persisted to cache AND the backend DB; lets us skip no-op
+  // writes. Both persist together on the same exit trigger, so one baseline
+  // covers both.
+  const lastPersistedNoteRef = useRef<string | null>(null)
 
   useEffect(() => {
     problemRef.current = problem
@@ -216,7 +218,7 @@ export default function FloatingNotes() {
           // Baseline for the flush: this problem's key, and the note as it
           // arrived, so an untouched panel never messages the SW.
           loadedUrlRef.current = url
-          lastCachedNoteRef.current = res.data.note
+          lastPersistedNoteRef.current = res.data.note
         } else {
           setError(res.error)
         }
@@ -248,19 +250,25 @@ export default function FloatingNotes() {
   }, [])
 
   /**
-   * Persist the in-memory problem (notes included) into the session cache.
-   * No API call — the backend is only touched by Start / Tried / Solved /
-   * Update. Content scripts can't reach chrome.storage.session, so this goes
-   * through the `cache-problem` service worker handler.
+   * Persist the in-memory problem (notes included) on exit. Writes to both the
+   * session cache and the backend DB so the website stays consistent with what
+   * the user last saw in the extension.
+   *
+   * Both writes are fire-and-forget (no await) so closing / leaving stays
+   * instant, and both are gated on the note having changed since the last
+   * persist. Content scripts can't reach chrome.storage.session or make
+   * authenticated API calls, so both go through service worker handlers
+   * (`cache-problem` and `action-problem`).
    */
-  const flushToCache = () => {
+  const flushOnExit = () => {
     const current = problemRef.current
     if (!current || !loadedUrlRef.current) return
     // Nothing typed since the last write -> skip the round trip.
-    if (current.note === lastCachedNoteRef.current) return
+    if (current.note === lastPersistedNoteRef.current) return
 
-    lastCachedNoteRef.current = current.note
+    lastPersistedNoteRef.current = current.note
 
+    // 1) Session cache.
     void sendToBackground<
       { url: string; problem: UserProblemFullClient },
       SwResult<null>
@@ -268,7 +276,26 @@ export default function FloatingNotes() {
       name: "cache-problem",
       body: { url: loadedUrlRef.current, problem: current }
     }).catch((err) => {
-      console.error("Error: flushToCache", err)
+      console.error("Error: flushOnExit (cache)", err)
+    })
+
+    // 2) Backend DB. Same path as the "Update notes" button, but fire-and-forget.
+    void sendToBackground<
+      { type: ProblemAction; input: ProblemActionInput },
+      SwResult<{ success: boolean; body: ActionResponseBody }>
+    >({
+      name: "action-problem",
+      body: {
+        type: ProblemAction.UpdateAction,
+        input: {
+          problemId: current.problemId,
+          note: current.note,
+          timeComplexity: current.timeComplexity,
+          spaceComplexity: current.spaceComplexity
+        }
+      }
+    }).catch((err) => {
+      console.error("Error: flushOnExit (save)", err)
     })
   }
 
@@ -277,16 +304,16 @@ export default function FloatingNotes() {
   // cleanup are backstops.
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") flushToCache()
+      if (document.visibilityState === "hidden") flushOnExit()
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("pagehide", flushToCache)
+    window.addEventListener("pagehide", flushOnExit)
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("pagehide", flushToCache)
-      flushToCache()
+      window.removeEventListener("pagehide", flushOnExit)
+      flushOnExit()
     }
   }, [])
 
@@ -363,6 +390,9 @@ export default function FloatingNotes() {
       if (!res.ok) {
         throw new Error("Error updating notes")
       }
+
+      // Baseline is now persisted; stop the exit flush from re-POSTing it.
+      lastPersistedNoteRef.current = problem.note
     } catch (err) {
       console.error("Error: handleUpdate function")
     } finally {
@@ -402,6 +432,10 @@ export default function FloatingNotes() {
       })
 
       if (!res.ok) throw new Error("Error finishing problem")
+
+      // The finish request already persisted the note; keep the exit flush from
+      // re-POSTing it.
+      lastPersistedNoteRef.current = problem.note
 
       const body = res.data.body
       /* Expecting duration in body in the response of SW */
@@ -503,7 +537,7 @@ export default function FloatingNotes() {
               <button
                 type="button"
                 onClick={() => {
-                  flushToCache()
+                  flushOnExit()
                   setIsOpen(false)
                 }}
                 aria-label="Close"
