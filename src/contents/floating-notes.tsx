@@ -526,7 +526,7 @@ export default function FloatingNotes() {
           }}
           handleStyles={resizeHandleStyles}
           handleComponent={resizeHandleComponents}
-          className="plasmo-overflow-hidden plasmo-rounded-lg plasmo-bg-[#282828] plasmo-text-white plasmo-border-2 plasmo-border-[#4a4a4a]">
+          className="plasmo-overflow-hidden plasmo-rounded-lg plasmo-bg-[#1a1a1a] plasmo-text-white plasmo-border-2 plasmo-border-[#8a8686]">
           <div className="plasmo-flex plasmo-h-full plasmo-flex-col">
             <div className="cp-drag-handle plasmo-flex plasmo-flex-none plasmo-cursor-move plasmo-items-stretch">
               <div className="plasmo-basis-[85%] plasmo-min-w-0">
