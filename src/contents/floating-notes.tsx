@@ -133,7 +133,9 @@ export default function FloatingNotes() {
   // Restore the saved size/position once on mount (before the panel is shown).
   useEffect(() => {
     chrome.storage.local.get(LAYOUT_STORAGE_KEY, (result) => {
-      const saved = result?.[LAYOUT_STORAGE_KEY] as Partial<PopupLayout> | undefined
+      const saved = result?.[LAYOUT_STORAGE_KEY] as
+        | Partial<PopupLayout>
+        | undefined
       if (
         !saved ||
         typeof saved.width !== "number" ||
@@ -177,7 +179,7 @@ export default function FloatingNotes() {
 
   /**
    * Checking user session -> loading problem using SW
-  */
+   */
   useEffect(() => {
     let cancelled = false
 
@@ -524,7 +526,7 @@ export default function FloatingNotes() {
           }}
           handleStyles={resizeHandleStyles}
           handleComponent={resizeHandleComponents}
-          className="plasmo-overflow-hidden plasmo-rounded-lg plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
+          className="plasmo-overflow-hidden plasmo-rounded-lg plasmo-bg-[#282828] plasmo-text-white plasmo-border-2 plasmo-border-[#4a4a4a]">
           <div className="plasmo-flex plasmo-h-full plasmo-flex-col">
             <div className="cp-drag-handle plasmo-flex plasmo-flex-none plasmo-cursor-move plasmo-items-stretch">
               <div className="plasmo-basis-[85%] plasmo-min-w-0">
