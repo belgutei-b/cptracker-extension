@@ -1,5 +1,6 @@
 /**
- * Injected JS into the page & enables to have same access as inline js
+ * Content script injected on LeetCode problem pages
+ * Runs in an isolated world and communicates with the popup via runtime messages
  */
 
 import styleText from "data-text:~style.css"
@@ -236,7 +237,6 @@ export default function FloatingNotes() {
       const session = await getSession()
       if (cancelled) return
 
-      console.error("session.success", session.success)
       if (session.success) {
         await getProblem()
       }

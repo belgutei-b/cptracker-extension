@@ -2,7 +2,7 @@
  * Single Source of Truth for the auth session in local storage
  * the only file that should access local storage for the session.
  * To access the session, call the Service Worker (SW) via `get-session`.
- * 
+ *
  * Reading & writing cache (best-effort) must have its own error handler
  * as it must not fail the get-session as it has API fallback.
  */
@@ -23,7 +23,6 @@ const handler: PlasmoMessaging.MessageHandler<
   SwResult<SessionData>
 > = async (_req, res) => {
   try {
-    console.log("SW: starting get-session")
     // cache hit -> return immediately, no API request
     const cached = await readSessionCache()
     if (cached) {
@@ -34,7 +33,7 @@ const handler: PlasmoMessaging.MessageHandler<
     const { data, error } = await authClient.getSession()
 
     if (error) {
-      console.log("SW: get-session auth request failed")
+      console.error("SW: get-session auth request failed")
       return res.send(SWFail(error.message ?? "Auth request failed"))
     }
 

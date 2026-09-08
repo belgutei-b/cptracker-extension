@@ -8,12 +8,12 @@ import type { SwResult } from "types/service-worker"
 
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 
+import { fetchProblem } from "~background/lib/problem-api"
 import {
   readProblemCache,
   writeProblemCache
 } from "~background/lib/problem-cache"
 import { SWFail, SWOk } from "~background/types"
-import { fetchProblem } from "~background/lib/problem-api"
 
 const handler: PlasmoMessaging.MessageHandler<
   { url: string },
@@ -27,11 +27,9 @@ const handler: PlasmoMessaging.MessageHandler<
     // cache hit -> return immediately, no API request
     const cached = await readProblemCache(req.body.url)
     if (cached) {
-      console.error("RETRIEVING FROM THE CACHE")
       return res.send(SWOk(cached))
     }
 
-    console.error("Cache miss. about to call the backend")
     // cache miss -> hit the backend
     const problem = await fetchProblem(req.body.url)
 

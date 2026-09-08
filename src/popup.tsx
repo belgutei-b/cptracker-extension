@@ -3,9 +3,6 @@ import { useEffect, useState } from "react"
 import PopupMessage from "~components/popup-message"
 import { useAuthSession } from "~hooks/use-auth-session"
 
-// FUTURE
-// TODO: add a "track this problem" action for problems not yet on the account
-
 import "~style.css"
 
 const DEFAULT_POPUP_WIDTH = 340
@@ -74,7 +71,7 @@ function IndexPopup() {
       style={{ width: DEFAULT_POPUP_WIDTH }}
       className="plasmo-min-w-[340px] plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
       <div className="plasmo-px-4 plasmo-py-6 plasmo-text-center plasmo-text-sm plasmo-text-stone-200">
-        The note-taker is open on the problem page.
+        Opening the note-taker.
       </div>
 
       <div className="plasmo-border-t plasmo-border-[#3e3e3e] plasmo-py-2 plasmo-text-center plasmo-text-[11px] plasmo-text-stone-400">
