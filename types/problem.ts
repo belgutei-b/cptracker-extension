@@ -31,3 +31,18 @@ export type SessionProblemRecord = {
   problem: UserProblemFullClient
   expiresAt: number
 }
+
+export type ProblemActionInput = {
+  problemId: string
+  newStatus?: ProblemStatus // missing if there is no status change
+  /* following fields are not required. as StartAction doesn't need them */
+  note?: string
+  timeComplexity?: string
+  spaceComplexity?: string
+}
+
+export enum ProblemAction {
+  StartAction,
+  FinishAction,
+  UpdateAction
+}

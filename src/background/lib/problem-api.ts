@@ -1,23 +1,7 @@
-import { type ProblemStatus, type UserProblemFullClient } from "types/problem"
+import { type UserProblemFullClient } from "types/problem"
+import type { ProblemActionInput } from "types/problem"
 
 import { APP_BASE_URL } from "~config/base-url"
-
-export type FinishProblemStatus = Extract<ProblemStatus, "TRIED" | "SOLVED">
-
-export type FinishProblemInput = {
-  problemId: string
-  newStatus: FinishProblemStatus
-  note: string
-  timeComplexity: string
-  spaceComplexity: string
-}
-
-export type SaveProblemInput = {
-  problemId: string
-  note: string
-  timeComplexity: string
-  spaceComplexity: string
-}
 
 type FetchProblemResponse = {
   problem: UserProblemFullClient
@@ -66,8 +50,8 @@ export async function fetchProblem(
 /**
  * Starting problem (TODO | TRIED -> IN_PROGRESS)
  */
-export async function startProblem(problemId: string): Promise<void> {
-  await requestProblemApi({
+export async function startProblem(problemId: string): Promise<Response> {
+  return await requestProblemApi({
     path: `/api/extension/problems/${problemId}/start`,
     method: "POST"
   })
@@ -76,8 +60,10 @@ export async function startProblem(problemId: string): Promise<void> {
 /**
  * Finishing problem (IN_PROGRESS -> SOLVED TRIED)
  */
-export async function finishProblem(input: FinishProblemInput): Promise<void> {
-  await requestProblemApi({
+export async function finishProblem(
+  input: ProblemActionInput
+): Promise<Response> {
+  return await requestProblemApi({
     path: `/api/extension/problems/${input.problemId}/finish`,
     method: "POST",
     body: {
@@ -92,8 +78,10 @@ export async function finishProblem(input: FinishProblemInput): Promise<void> {
 /**
  * Updating notes / time & space complexity
  */
-export async function saveProblem(input: SaveProblemInput): Promise<void> {
-  await requestProblemApi({
+export async function saveProblem(
+  input: ProblemActionInput
+): Promise<Response> {
+  return await requestProblemApi({
     path: `/api/extension/problems/${input.problemId}/save`,
     method: "PATCH",
     body: {
