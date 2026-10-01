@@ -51,7 +51,7 @@ src/
 1. update the version number in package.json
 2. remove localhost from host permissions in package.json
 3. change the backend to allow any extension origin to enable api request from the build
-4. zip the prod in ./build/chrome-mv3-prod
+4. zip the prod in ./build/chrome-mv3-prod (pnpm build & pnpm package)
 
 ## Extension Work Flow
 
