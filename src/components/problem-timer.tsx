@@ -51,10 +51,14 @@ function ProblemTimer({
   const formattedTimer = formatProblemTimer(displayedMs)
 
   return (
-    <div className="plasmo-flex plasmo-w-full plasmo-justify-center plasmo-border-y plasmo-border-[#3e3e3e] plasmo-py-3 plasmo-text-[#ffa116]">
-      <span className="plasmo-font-mono plasmo-text-2xl">
+    <div className="plasmo-flex plasmo-w-full plasmo-justify-center plasmo-py-3.5">
+      <span
+        role="timer"
+        className="plasmo-font-mono plasmo-text-2xl plasmo-font-medium plasmo-leading-none plasmo-tracking-tight plasmo-text-foreground plasmo-tabular-nums">
         {formattedTimer.main}
-        <span className="plasmo-text-lg">.{formattedTimer.centiseconds}</span>
+        <span className="plasmo-text-base plasmo-tracking-normal plasmo-text-muted-foreground">
+          .{formattedTimer.centiseconds}
+        </span>
       </span>
     </div>
   )

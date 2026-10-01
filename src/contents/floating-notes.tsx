@@ -16,6 +16,7 @@ import { sendToBackground } from "@plasmohq/messaging"
 
 import { type SessionData } from "~auth/auth-client"
 import type { ActionResponseBody } from "~background/messages/action-problem"
+import { CheckIcon, PlayIcon, XIcon } from "~components/icons"
 import NotesEditor from "~components/notes-editor"
 import PopupMessage from "~components/popup-message"
 import ProblemTimer from "~components/problem-timer"
@@ -65,30 +66,10 @@ const resizeHandleStyles = {
 }
 const resizeHandleComponents = {
   bottom: (
-    <div
-      style={{
-        position: "absolute",
-        left: "14px",
-        right: "14px",
-        bottom: "4px",
-        height: "2px",
-        borderRadius: "9999px",
-        backgroundColor: "rgba(120, 113, 108, 0.55)"
-      }}
-    />
+    <div className="plasmo-absolute plasmo-inset-x-3.5 plasmo-bottom-1 plasmo-h-0.5 plasmo-rounded-full plasmo-bg-input" />
   ),
   right: (
-    <div
-      style={{
-        position: "absolute",
-        top: "14px",
-        bottom: "14px",
-        right: "4px",
-        width: "2px",
-        borderRadius: "9999px",
-        backgroundColor: "rgba(120, 113, 108, 0.55)"
-      }}
-    />
+    <div className="plasmo-absolute plasmo-inset-y-3.5 plasmo-right-1 plasmo-w-0.5 plasmo-rounded-full plasmo-bg-input" />
   )
 }
 
@@ -465,7 +446,7 @@ export default function FloatingNotes() {
         zIndex: 2147483647,
         width
       }}
-      className="plasmo-min-w-[340px] plasmo-overflow-hidden plasmo-rounded-lg plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
+      className="plasmo-min-w-[340px] plasmo-overflow-hidden plasmo-rounded-xl plasmo-border plasmo-border-input plasmo-bg-card plasmo-font-sans plasmo-text-foreground plasmo-shadow-xl">
       {children}
     </div>
   )
@@ -526,16 +507,14 @@ export default function FloatingNotes() {
           }}
           handleStyles={resizeHandleStyles}
           handleComponent={resizeHandleComponents}
-          className="plasmo-overflow-hidden plasmo-rounded-lg plasmo-bg-[#1a1a1a] plasmo-text-white plasmo-border-2 plasmo-border-[#8a8686]">
+          className="plasmo-overflow-hidden plasmo-rounded-xl plasmo-border plasmo-border-input plasmo-bg-card plasmo-font-sans plasmo-text-sm plasmo-text-foreground plasmo-shadow-xl">
           <div className="plasmo-flex plasmo-h-full plasmo-flex-col">
-            <div className="cp-drag-handle plasmo-flex plasmo-flex-none plasmo-cursor-move plasmo-items-stretch">
-              <div className="plasmo-basis-[85%] plasmo-min-w-0">
-                <ProblemTimer
-                  elapsedMs={elapsedMs}
-                  startedAtMs={startedAtMs}
-                  isSolving={problem.status === "IN_PROGRESS"}
-                />
-              </div>
+            <div className="cp-drag-handle plasmo-relative plasmo-flex-none plasmo-cursor-move plasmo-border-b plasmo-border-border plasmo-bg-background">
+              <ProblemTimer
+                elapsedMs={elapsedMs}
+                startedAtMs={startedAtMs}
+                isSolving={problem.status === "IN_PROGRESS"}
+              />
               <button
                 type="button"
                 onClick={() => {
@@ -543,12 +522,12 @@ export default function FloatingNotes() {
                   setIsOpen(false)
                 }}
                 aria-label="Close"
-                className="cp-no-drag plasmo-flex plasmo-basis-[15%] plasmo-items-center plasmo-justify-center plasmo-border-y plasmo-border-l plasmo-border-[#3e3e3e] plasmo-text-lg plasmo-text-stone-400 hover:plasmo-bg-white/10 hover:plasmo-text-white">
-                ✕
+                className="cp-no-drag popup-btn popup-btn--outline popup-btn--icon plasmo-absolute plasmo-right-2.5 plasmo-top-1/2 -plasmo-translate-y-1/2 plasmo-text-muted-foreground hover:plasmo-text-foreground">
+                <XIcon className="plasmo-size-3.5" />
               </button>
             </div>
 
-            <div className="plasmo-flex plasmo-min-h-0 plasmo-flex-1 plasmo-flex-col plasmo-px-2 plasmo-pt-3">
+            <div className="plasmo-flex plasmo-min-h-0 plasmo-flex-1 plasmo-flex-col plasmo-px-3 plasmo-pt-3">
               <div className="plasmo-min-h-0 plasmo-flex-1">
                 <NotesEditor
                   value={problem.note}
@@ -557,12 +536,18 @@ export default function FloatingNotes() {
               </div>
             </div>
 
-            <div className="plasmo-flex plasmo-flex-none plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-border-[#3e3e3e] plasmo-px-2 plasmo-py-2">
+            <div className="plasmo-flex plasmo-flex-none plasmo-items-center plasmo-justify-end plasmo-gap-2 plasmo-px-3 plasmo-py-3">
               {!(problem.status === "IN_PROGRESS") && (
                 <button
                   onClick={handleUpdate}
                   disabled={isMutating}
-                  className="popup-btn popup-btn--update">
+                  // Lime only when it's the sole action (a solved problem
+                  // has no Start button).
+                  className={`popup-btn ${
+                    problem.status === "SOLVED"
+                      ? "popup-btn--primary"
+                      : "popup-btn--outline"
+                  }`}>
                   Update notes
                 </button>
               )}
@@ -572,8 +557,9 @@ export default function FloatingNotes() {
                   <button
                     onClick={handleStart}
                     disabled={isMutating}
-                    className="popup-btn popup-btn--start">
-                    ▶ Start
+                    className="popup-btn popup-btn--primary">
+                    <PlayIcon className="plasmo-size-3" />
+                    Start
                   </button>
                 )}
 
@@ -582,25 +568,26 @@ export default function FloatingNotes() {
                   <button
                     onClick={() => handleFinish("TRIED")}
                     disabled={isMutating}
-                    className="popup-btn popup-btn--tried">
+                    className="popup-btn popup-btn--outline">
                     Tried
                   </button>
                   <button
                     onClick={() => handleFinish("SOLVED")}
                     disabled={isMutating}
-                    className="popup-btn popup-btn--solved">
+                    className="popup-btn popup-btn--primary">
+                    <CheckIcon className="plasmo-size-3.5" />
                     Solved
                   </button>
                 </>
               )}
             </div>
 
-            <div className="plasmo-flex-none plasmo-border-t plasmo-border-[#3e3e3e] plasmo-py-2 plasmo-text-center plasmo-text-[11px] plasmo-text-stone-400">
+            <div className="plasmo-flex-none plasmo-border-t plasmo-border-border plasmo-py-2 plasmo-text-center plasmo-text-xs plasmo-text-muted-foreground">
               <a
                 href="https://www.cptracker.org"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:plasmo-text-stone-200">
+                className="plasmo-transition-colors hover:plasmo-text-foreground">
                 www.cptracker.org
               </a>
             </div>

@@ -13,13 +13,13 @@ function ComplexityField({
   value,
   placeholder,
   onChange,
-  textClassName = "plasmo-text-stone-200"
+  textClassName = "plasmo-text-foreground"
 }: ComplexityFieldProps) {
   return (
     <div>
       <label
         htmlFor={id}
-        className="plasmo-mb-1 plasmo-block plasmo-text-xs plasmo-font-semibold plasmo-text-stone-300">
+        className="plasmo-mb-1.5 plasmo-block plasmo-text-xs plasmo-font-medium plasmo-text-muted-foreground">
         {label}
       </label>
       <input
@@ -28,7 +28,7 @@ function ComplexityField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`plasmo-w-full plasmo-rounded-lg plasmo-border plasmo-border-[#3e3e3e] plasmo-bg-[#1f1f1f] plasmo-px-2 plasmo-py-2 plasmo-text-xs ${textClassName} placeholder:plasmo-text-stone-600`}
+        className={`plasmo-h-8 plasmo-w-full plasmo-rounded-lg plasmo-border plasmo-border-input plasmo-bg-input/30 plasmo-px-2.5 plasmo-font-mono plasmo-text-sm ${textClassName} placeholder:plasmo-text-muted-foreground focus:plasmo-outline-none focus:plasmo-ring-2 focus:plasmo-ring-primary/50`}
       />
     </div>
   )

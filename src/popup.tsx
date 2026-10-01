@@ -69,17 +69,17 @@ function IndexPopup() {
   return (
     <div
       style={{ width: DEFAULT_POPUP_WIDTH }}
-      className="plasmo-min-w-[340px] plasmo-bg-[#282828] plasmo-text-white plasmo-shadow-xl">
-      <div className="plasmo-px-4 plasmo-py-6 plasmo-text-center plasmo-text-sm plasmo-text-stone-200">
+      className="plasmo-min-w-[340px] plasmo-bg-card plasmo-font-sans plasmo-text-foreground">
+      <div className="plasmo-px-4 plasmo-py-6 plasmo-text-center plasmo-text-sm plasmo-text-foreground">
         Opening the note-taker.
       </div>
 
-      <div className="plasmo-border-t plasmo-border-[#3e3e3e] plasmo-py-2 plasmo-text-center plasmo-text-[11px] plasmo-text-stone-400">
+      <div className="plasmo-border-t plasmo-border-border plasmo-py-2.5 plasmo-text-center plasmo-text-xs plasmo-text-muted-foreground">
         <a
           href="https://www.cptracker.org"
           target="_blank"
           rel="noreferrer"
-          className="hover:plasmo-text-stone-200">
+          className="plasmo-transition-colors hover:plasmo-text-foreground">
           www.cptracker.org
         </a>
       </div>
