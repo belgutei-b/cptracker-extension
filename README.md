@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://cptracker.org/">
-    <img src="https://github.com/belgutei-b/cptracker/blob/main/public/favicon_io/android-chrome-512x512.png" width="140px" alt="CPTracker logo" />
+    <img src="assets/icon.png" width="140px" alt="CPTracker logo" />
   </a>
 </p>
 
