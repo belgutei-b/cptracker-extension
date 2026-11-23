@@ -152,6 +152,7 @@ export default function FloatingNotes() {
     const handleMessage = (message: { type?: string }) => {
       if (message?.type === OPEN_FLOATING_NOTES) {
         setIsOpen(true)
+        loadUserAndProblem()
       }
     }
 
@@ -159,12 +160,10 @@ export default function FloatingNotes() {
     return () => chrome.runtime.onMessage.removeListener(handleMessage)
   }, [])
 
-  /**
-   * Checking user session -> loading problem using SW
-   */
-  useEffect(() => {
-    let cancelled = false
 
+
+
+  async function loadUserAndProblem() {
     async function getSession(): Promise<{ success: boolean }> {
       try {
         const res = await sendToBackground<undefined, SwResult<SessionData>>({
@@ -179,7 +178,6 @@ export default function FloatingNotes() {
         }
       } catch (err) {
         console.error("Error: getSession", err)
-        if (!cancelled) setError("Unexpected error occurred")
       }
       return { success: false }
     }
@@ -208,29 +206,16 @@ export default function FloatingNotes() {
         }
       } catch (err) {
         console.error("Error: getProblem", err)
-        if (!cancelled) setError("Unexpected error occurred")
       }
     }
+    const session = await getSession()
 
-    async function loadUserAndProblem() {
-      setLoading(true)
-
-      const session = await getSession()
-      if (cancelled) return
-
-      if (session.success) {
-        await getProblem()
-      }
-
-      if (!cancelled) setLoading(false)
+    if (session.success) {
+      await getProblem()
     }
+    setLoading(false)
+  }
 
-    loadUserAndProblem()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   /**
    * Persist the in-memory problem (notes included) on exit. Writes to both the
@@ -543,11 +528,10 @@ export default function FloatingNotes() {
                   disabled={isMutating}
                   // Lime only when it's the sole action (a solved problem
                   // has no Start button).
-                  className={`popup-btn ${
-                    problem.status === "SOLVED"
-                      ? "popup-btn--primary"
-                      : "popup-btn--outline"
-                  }`}>
+                  className={`popup-btn ${problem.status === "SOLVED"
+                    ? "popup-btn--primary"
+                    : "popup-btn--outline"
+                    }`}>
                   Update notes
                 </button>
               )}
