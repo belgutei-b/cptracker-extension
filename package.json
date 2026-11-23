@@ -37,7 +37,8 @@
     ],
     "host_permissions": [
       "https://www.cptracker.org/*",
-      "http://localhost:3000/*"
+      "http://localhost:3000/*",
+      "https://leetcode.com/*"
     ]
   }
 }

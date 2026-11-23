@@ -27,7 +27,7 @@ function IndexPopup() {
   // On open (icon press), read the active tab and ask its content script to
   // reveal the floating note-taker.
   useEffect(() => {
-    ;(async () => {
+    ; (async () => {
       const [tab] = await chrome.tabs.query({
         active: true,
         currentWindow: true
